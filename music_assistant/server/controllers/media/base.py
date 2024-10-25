@@ -272,7 +272,7 @@ class MediaControllerBase(Generic[ItemCls], metaclass=ABCMeta):
         ):
             # schedule a refresh of the metadata on access of the item
             # e.g. the item is being played or opened in the UI
-            self.mass.metadata.schedule_update_metadata(library_item)
+            self.mass.metadata.schedule_update_metadata(library_item.uri)
             return library_item
         # grab full details from the provider
         return await self.get_provider_item(
