@@ -863,11 +863,11 @@ class PlayerController(CoreController):
             # ignore updates for disabled players
             return
 
+        # always signal update to the playerqueue (regardless of changes)
+        self.mass.player_queues.on_player_update(player, changed_values)
+
         if len(changed_values) == 0 and not force_update:
             return
-
-        # signal update to the playerqueue
-        self.mass.player_queues.on_player_update(player, changed_values)
 
         if changed_values.keys() != {"elapsed_time"} or force_update:
             # ignore elapsed_time only changes
