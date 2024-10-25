@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import random
 import urllib.parse
 from base64 import b64encode
-from collections.abc import Iterable
 from contextlib import suppress
 from time import time
 from typing import TYPE_CHECKING, cast
@@ -394,7 +394,7 @@ class MetaDataController(CoreController):
 
     async def create_collage_image(
         self,
-        images: Iterable[MediaItemImage],
+        images: list[MediaItemImage],
         img_path: str,
         fanart: bool = False,
     ) -> MediaItemImage | None:
@@ -402,6 +402,8 @@ class MetaDataController(CoreController):
         if len(images) < 8 and fanart or len(images) < 3:
             # require at least some images otherwise this does not make a lot of sense
             return None
+        # limit to 50 images to prevent we're going OOM
+        images = random.sample(images, 50)
         try:
             # create collage thumb from playlist tracks
             # if playlist has no default image (e.g. a local playlist)
@@ -410,6 +412,7 @@ class MetaDataController(CoreController):
             # always overwrite existing path
             async with aiofiles.open(img_path, "wb") as _file:
                 await _file.write(img_data)
+            del img_data
             return MediaItemImage(
                 type=ImageType.FANART if fanart else ImageType.THUMB,
                 path=img_path,
@@ -604,13 +607,20 @@ class MetaDataController(CoreController):
             return
         self.logger.debug("Updating metadata for Playlist %s", playlist.name)
         playlist.metadata.genres = set()
-        all_playlist_tracks_images = set()
+        all_playlist_tracks_images: list[MediaItemImage] = []
         playlist_genres: dict[str, int] = {}
         # retrieve metadata for the playlist from the tracks (such as genres etc.)
         # TODO: retrieve style/mood ?
         async for track in self.mass.music.playlists.tracks(playlist.item_id, playlist.provider):
-            if track.image:
-                all_playlist_tracks_images.add(track.image)
+            if (
+                track.image
+                and track.image not in all_playlist_tracks_images
+                and (
+                    track.image.provider in ("url", "builtin", "http")
+                    or self.mass.get_provider(track.image.provider)
+                )
+            ):
+                all_playlist_tracks_images.append(track.image)
             if track.metadata.genres:
                 genres = track.metadata.genres
             elif track.album and isinstance(track.album, Album) and track.album.metadata.genres:
@@ -624,6 +634,7 @@ class MetaDataController(CoreController):
             await asyncio.sleep(0)  # yield to eventloop
 
         playlist_genres_filtered = {genre for genre, count in playlist_genres.items() if count > 5}
+        playlist_genres_filtered = list(playlist_genres_filtered)[:8]
         playlist.metadata.genres.update(playlist_genres_filtered)
         # create collage images
         cur_images = playlist.metadata.images or []
