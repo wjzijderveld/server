@@ -403,7 +403,10 @@ class MetaDataController(CoreController):
             # require at least some images otherwise this does not make a lot of sense
             return None
         # limit to 50 images to prevent we're going OOM
-        images = random.sample(images, 50)
+        if len(images) > 50:
+            images = random.sample(images, 50)
+        else:
+            random.shuffle(images)
         try:
             # create collage thumb from playlist tracks
             # if playlist has no default image (e.g. a local playlist)
