@@ -478,6 +478,19 @@ class MusicController(CoreController):
             provider_instance_id_or_domain=provider_instance_id_or_domain,
         )
 
+    async def get_library_item_by_prov_id(
+        self,
+        media_type: MediaType,
+        item_id: str,
+        provider_instance_id_or_domain: str,
+    ) -> MediaItemType | None:
+        """Get single library music item by id and media type."""
+        ctrl = self.get_controller(media_type)
+        return await ctrl.get_library_item_by_prov_id(
+            item_id=item_id,
+            provider_instance_id_or_domain=provider_instance_id_or_domain,
+        )
+
     @api_command("music/favorites/add_item")
     async def add_item_to_favorites(
         self,

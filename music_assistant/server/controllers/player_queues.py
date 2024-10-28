@@ -1119,9 +1119,13 @@ class PlayerQueuesController(CoreController):
                     queue_item=queue_item,
                     prefer_album_loudness=prefer_album_loudness,
                 )
-                # Preload the full MediaItem for the QueueItem, making sure to get the
-                # maximum quality of thumbs
-                if queue_item.media_item:
+                # Ensure we have at least an image for the queue item,
+                # so grab full item if needed. Note that for YTM this is always needed
+                # because it has poor thumbs by default (..sigh)
+                if queue_item.media_item and (
+                    not queue_item.media_item.image
+                    or queue_item.media_item.provider.startswith("ytmusic")
+                ):
                     queue_item.media_item = await self.mass.music.get_item_by_uri(queue_item.uri)
                 # allow stripping silence from the begin/end of the track if crossfade is enabled
                 # this will allow for (much) smoother crossfades
@@ -1134,11 +1138,6 @@ class PlayerQueuesController(CoreController):
             except MediaNotFoundError:
                 # No stream details found, skip this QueueItem
                 self.logger.debug("Skipping unplayable item: %s", next_item)
-                # we need to set a fake streamdetails object on the item
-                # otherwise our flow mode logic will break which
-                # calculates where we are in the queue
-                playlog = queue_item.streamdetails.play_log if queue_item.streamdetails else []
-                playlog.append(0.0)
                 queue_item.streamdetails = StreamDetails(
                     provider=queue_item.media_item.provider if queue_item.media_item else "unknown",
                     item_id=queue_item.media_item.item_id if queue_item.media_item else "unknown",
