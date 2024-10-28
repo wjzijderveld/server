@@ -455,6 +455,44 @@ class PlayerController(CoreController):
             coros.append(self.cmd_volume_set(child_player.player_id, new_child_volume))
         await asyncio.gather(*coros)
 
+    @api_command("players/cmd/group_volume_up")
+    @handle_player_command
+    async def cmd_group_volume_up(self, player_id: str) -> None:
+        """Send VOLUME_UP command to given playergroup.
+
+        - player_id: player_id of the player to handle the command.
+        """
+        group_player = self.get(player_id, True)
+        assert group_player
+        cur_volume = group_player.group_volume
+        if cur_volume < 5 or cur_volume > 95:
+            step_size = 1
+        elif cur_volume < 20 or cur_volume > 80:
+            step_size = 2
+        else:
+            step_size = 5
+        new_volume = min(100, cur_volume + step_size)
+        await self.cmd_group_volume(player_id, new_volume)
+
+    @api_command("players/cmd/group_volume_down")
+    @handle_player_command
+    async def cmd_group_volume_down(self, player_id: str) -> None:
+        """Send VOLUME_DOWN command to given playergroup.
+
+        - player_id: player_id of the player to handle the command.
+        """
+        group_player = self.get(player_id, True)
+        assert group_player
+        cur_volume = group_player.group_volume
+        if cur_volume < 5 or cur_volume > 95:
+            step_size = 1
+        elif cur_volume < 20 or cur_volume > 80:
+            step_size = 2
+        else:
+            step_size = 5
+        new_volume = max(0, cur_volume - step_size)
+        await self.cmd_group_volume(player_id, new_volume)
+
     @api_command("players/cmd/volume_mute")
     @handle_player_command
     async def cmd_volume_mute(self, player_id: str, muted: bool) -> None:
