@@ -1,7 +1,3 @@
 {
-  ".": "2.4.0b2",
-  "prerelease": true,
-  "versioning-strategy": "prerelease",
-  "prerelease-type": "b",
-  "draft-pr": true
+  ".": "2.4.0b2"
 }
