@@ -8,14 +8,17 @@ from collections import deque
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
+from music_assistant_models.enums import ContentType
 from music_assistant_models.errors import AudioError
-from music_assistant_models.helpers.global_cache import get_global_cache_value
-from music_assistant_models.media_items import AudioFormat, ContentType
+from music_assistant_models.helpers import get_global_cache_value
 
 from music_assistant.constants import VERBOSE_LOG_LEVEL
 
 from .process import AsyncProcess
 from .util import TimedAsyncGenerator, close_async_generator
+
+if TYPE_CHECKING:
+    from music_assistant_models.media_items import AudioFormat
 
 LOGGER = logging.getLogger("ffmpeg")
 MINIMAL_FFMPEG_VERSION = 6

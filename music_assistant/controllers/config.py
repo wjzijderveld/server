@@ -15,8 +15,6 @@ from aiofiles.os import wrap
 from cryptography.fernet import Fernet, InvalidToken
 from music_assistant_models import config_entries
 from music_assistant_models.config_entries import (
-    DEFAULT_CORE_CONFIG_ENTRIES,
-    DEFAULT_PROVIDER_CONFIG_ENTRIES,
     ConfigEntry,
     ConfigValueType,
     CoreConfig,
@@ -30,7 +28,7 @@ from music_assistant_models.errors import (
     PlayerCommandFailed,
     UnsupportedFeaturedException,
 )
-from music_assistant_models.helpers.global_cache import get_global_cache_value
+from music_assistant_models.helpers import get_global_cache_value
 
 from music_assistant.constants import (
     CONF_CORE,
@@ -38,6 +36,8 @@ from music_assistant.constants import (
     CONF_PROVIDERS,
     CONF_SERVER_ID,
     CONFIGURABLE_CORE_CONTROLLERS,
+    DEFAULT_CORE_CONFIG_ENTRIES,
+    DEFAULT_PROVIDER_CONFIG_ENTRIES,
     ENCRYPT_SUFFIX,
 )
 from music_assistant.helpers.api import api_command

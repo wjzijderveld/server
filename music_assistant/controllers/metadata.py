@@ -26,7 +26,7 @@ from music_assistant_models.enums import (
     ProviderType,
 )
 from music_assistant_models.errors import MediaNotFoundError, ProviderUnavailableError
-from music_assistant_models.helpers.global_cache import get_global_cache_value
+from music_assistant_models.helpers import get_global_cache_value
 from music_assistant_models.media_items import (
     Album,
     Artist,

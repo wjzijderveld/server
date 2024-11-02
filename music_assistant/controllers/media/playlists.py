@@ -14,11 +14,11 @@ from music_assistant_models.errors import (
     ProviderUnavailableError,
     UnsupportedFeaturedException,
 )
-from music_assistant_models.helpers.uri import create_uri, parse_uri
 from music_assistant_models.media_items import Playlist, PlaylistTrack, Track
 
 from music_assistant.constants import DB_TABLE_PLAYLISTS
 from music_assistant.helpers.json import serialize_to_json
+from music_assistant.helpers.uri import create_uri, parse_uri
 from music_assistant.models.music_provider import MusicProvider
 
 from .base import MediaControllerBase

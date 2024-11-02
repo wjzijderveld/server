@@ -12,15 +12,6 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import pychromecast
-from music_assistant_models.config_entries import (
-    BASE_PLAYER_CONFIG_ENTRIES,
-    CONF_ENTRY_CROSSFADE_DURATION,
-    CONF_ENTRY_CROSSFADE_FLOW_MODE_REQUIRED,
-    CONF_ENTRY_ENFORCE_MP3,
-    ConfigEntry,
-    ConfigValueType,
-    create_sample_rates_config_entry,
-)
 from music_assistant_models.enums import MediaType, PlayerFeature, PlayerState, PlayerType
 from music_assistant_models.errors import PlayerUnavailableError
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
@@ -30,16 +21,22 @@ from pychromecast.discovery import CastBrowser, SimpleCastListener
 from pychromecast.socket_client import CONNECTION_STATUS_CONNECTED, CONNECTION_STATUS_DISCONNECTED
 
 from music_assistant.constants import (
+    BASE_PLAYER_CONFIG_ENTRIES,
     CONF_ENFORCE_MP3,
+    CONF_ENTRY_CROSSFADE_DURATION,
+    CONF_ENTRY_CROSSFADE_FLOW_MODE_REQUIRED,
+    CONF_ENTRY_ENFORCE_MP3,
     CONF_PLAYERS,
     MASS_LOGO_ONLINE,
     VERBOSE_LOG_LEVEL,
+    create_sample_rates_config_entry,
 )
-from music_assistant.helpers import CastStatusListener, ChromecastInfo
 from music_assistant.models.player_provider import PlayerProvider
 
+from .helpers import CastStatusListener, ChromecastInfo
+
 if TYPE_CHECKING:
-    from music_assistant_models.config_entries import ProviderConfig
+    from music_assistant_models.config_entries import ConfigEntry, ConfigValueType, ProviderConfig
     from music_assistant_models.provider import ProviderManifest
     from pychromecast.controllers.media import MediaStatus
     from pychromecast.controllers.receiver import CastStatus

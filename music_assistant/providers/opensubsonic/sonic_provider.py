@@ -14,6 +14,7 @@ from libopensonic.errors import (
     SonicError,
 )
 from music_assistant_models.enums import (
+    AlbumType,
     ContentType,
     ImageType,
     MediaType,
@@ -23,7 +24,6 @@ from music_assistant_models.enums import (
 from music_assistant_models.errors import LoginFailed, MediaNotFoundError, ProviderPermissionDenied
 from music_assistant_models.media_items import (
     Album,
-    AlbumType,
     Artist,
     AudioFormat,
     ItemMapping,

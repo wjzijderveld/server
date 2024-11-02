@@ -16,24 +16,25 @@ from aiohttp import web
 from aiohttp.client_exceptions import ClientError
 from aiosonos.api.models import SonosCapability
 from aiosonos.utils import get_discovery_info
-from music_assistant_models.config_entries import (
-    CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_ENFORCE_MP3,
-    CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
-    ConfigEntry,
-    create_sample_rates_config_entry,
-)
+from music_assistant_models.config_entries import ConfigEntry
 from music_assistant_models.enums import ConfigEntryType, ContentType, ProviderFeature
 from music_assistant_models.errors import PlayerCommandFailed
 from music_assistant_models.player import DeviceInfo, PlayerMedia
 from zeroconf import ServiceStateChange
 
-from music_assistant.constants import MASS_LOGO_ONLINE, VERBOSE_LOG_LEVEL
-from music_assistant.helpers import get_primary_ip_address
+from music_assistant.constants import (
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_ENFORCE_MP3,
+    CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
+    MASS_LOGO_ONLINE,
+    VERBOSE_LOG_LEVEL,
+    create_sample_rates_config_entry,
+)
 from music_assistant.helpers.tags import parse_tags
 from music_assistant.models.player_provider import PlayerProvider
 
 from .const import CONF_AIRPLAY_MODE
+from .helpers import get_primary_ip_address
 from .player import SonosPlayer
 
 if TYPE_CHECKING:

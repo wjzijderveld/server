@@ -10,18 +10,7 @@ import time
 from random import randrange
 from typing import TYPE_CHECKING
 
-from music_assistant_models.config_entries import (
-    CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_CROSSFADE_DURATION,
-    CONF_ENTRY_EQ_BASS,
-    CONF_ENTRY_EQ_MID,
-    CONF_ENTRY_EQ_TREBLE,
-    CONF_ENTRY_FLOW_MODE_ENFORCED,
-    CONF_ENTRY_OUTPUT_CHANNELS,
-    CONF_ENTRY_SYNC_ADJUST,
-    ConfigEntry,
-    create_sample_rates_config_entry,
-)
+from music_assistant_models.config_entries import ConfigEntry
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -36,10 +25,16 @@ from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
 from zeroconf import ServiceStateChange
 from zeroconf.asyncio import AsyncServiceInfo
 
-from music_assistant.helpers import (
-    convert_airplay_volume,
-    get_model_from_am,
-    get_primary_ip_address,
+from music_assistant.constants import (
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_CROSSFADE_DURATION,
+    CONF_ENTRY_EQ_BASS,
+    CONF_ENTRY_EQ_MID,
+    CONF_ENTRY_EQ_TREBLE,
+    CONF_ENTRY_FLOW_MODE_ENFORCED,
+    CONF_ENTRY_OUTPUT_CHANNELS,
+    CONF_ENTRY_SYNC_ADJUST,
+    create_sample_rates_config_entry,
 )
 from music_assistant.helpers.audio import get_ffmpeg_stream
 from music_assistant.helpers.datetime import utc
@@ -58,6 +53,7 @@ from .const import (
     CONF_READ_AHEAD_BUFFER,
     FALLBACK_VOLUME,
 )
+from .helpers import convert_airplay_volume, get_model_from_am, get_primary_ip_address
 from .player import AirPlayPlayer
 
 if TYPE_CHECKING:

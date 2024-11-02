@@ -8,20 +8,17 @@ import time
 from typing import TYPE_CHECKING
 
 from fullykiosk import FullyKiosk
-from music_assistant_models.config_entries import (
-    CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_CROSSFADE_DURATION,
-    CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED,
-    CONF_ENTRY_FLOW_MODE_ENFORCED,
-    ConfigEntry,
-    ConfigValueType,
-)
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
 from music_assistant_models.enums import ConfigEntryType, PlayerFeature, PlayerState, PlayerType
 from music_assistant_models.errors import PlayerUnavailableError, SetupFailedError
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
 
 from music_assistant.constants import (
     CONF_ENFORCE_MP3,
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_CROSSFADE_DURATION,
+    CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED,
+    CONF_ENTRY_FLOW_MODE_ENFORCED,
     CONF_IP_ADDRESS,
     CONF_PASSWORD,
     CONF_PORT,

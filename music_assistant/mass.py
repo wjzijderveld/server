@@ -16,7 +16,7 @@ from music_assistant_models.api import ServerInfoMessage
 from music_assistant_models.enums import EventType, ProviderType
 from music_assistant_models.errors import MusicAssistantError, SetupFailedError
 from music_assistant_models.event import MassEvent
-from music_assistant_models.helpers.global_cache import set_global_cache_values
+from music_assistant_models.helpers import set_global_cache_values
 from music_assistant_models.provider import ProviderManifest
 from zeroconf import IPVersion, NonUniqueNameException, ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf

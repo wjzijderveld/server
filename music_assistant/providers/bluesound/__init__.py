@@ -6,15 +6,6 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, TypedDict
 
-from music_assistant_models.config_entries import (
-    CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_ENABLE_ICY_METADATA,
-    CONF_ENTRY_ENFORCE_MP3,
-    CONF_ENTRY_FLOW_MODE_ENFORCED,
-    CONF_ENTRY_HTTP_PROFILE_FORCED_2,
-    ConfigEntry,
-    ConfigValueType,
-)
 from music_assistant_models.enums import PlayerFeature, PlayerState, PlayerType, ProviderFeature
 from music_assistant_models.errors import PlayerCommandFailed
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
@@ -22,7 +13,14 @@ from pyblu import Player as BluosPlayer
 from pyblu import Status, SyncStatus
 from zeroconf import ServiceStateChange
 
-from music_assistant.constants import VERBOSE_LOG_LEVEL
+from music_assistant.constants import (
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_ENABLE_ICY_METADATA,
+    CONF_ENTRY_ENFORCE_MP3,
+    CONF_ENTRY_FLOW_MODE_ENFORCED,
+    CONF_ENTRY_HTTP_PROFILE_FORCED_2,
+    VERBOSE_LOG_LEVEL,
+)
 from music_assistant.helpers.util import (
     get_port_from_zeroconf,
     get_primary_ip_address_from_zeroconf,
@@ -30,7 +28,7 @@ from music_assistant.helpers.util import (
 from music_assistant.models.player_provider import PlayerProvider
 
 if TYPE_CHECKING:
-    from music_assistant_models.config_entries import ProviderConfig
+    from music_assistant_models.config_entries import ConfigEntry, ConfigValueType, ProviderConfig
     from music_assistant_models.provider import ProviderManifest
     from zeroconf.asyncio import AsyncServiceInfo
 

@@ -7,13 +7,17 @@ import time
 from typing import TYPE_CHECKING
 
 from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
-from music_assistant_models.enums import ConfigEntryType, ProviderFeature, StreamType
+from music_assistant_models.enums import (
+    ConfigEntryType,
+    ContentType,
+    ImageType,
+    ProviderFeature,
+    StreamType,
+)
 from music_assistant_models.errors import InvalidDataError, LoginFailed
 from music_assistant_models.media_items import (
     Artist,
     AudioFormat,
-    ContentType,
-    ImageType,
     MediaItemImage,
     MediaType,
     Playlist,

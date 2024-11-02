@@ -5,22 +5,22 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-from music_assistant_models.config_entries import (
+from music_assistant_models.errors import UnsupportedFeaturedException
+from zeroconf import ServiceStateChange
+from zeroconf.asyncio import AsyncServiceInfo
+
+from music_assistant.constants import (
     BASE_PLAYER_CONFIG_ENTRIES,
     CONF_ENTRY_ANNOUNCE_VOLUME,
     CONF_ENTRY_ANNOUNCE_VOLUME_MAX,
     CONF_ENTRY_ANNOUNCE_VOLUME_MIN,
     CONF_ENTRY_ANNOUNCE_VOLUME_STRATEGY,
-    ConfigEntry,
-    PlayerConfig,
 )
-from music_assistant_models.errors import UnsupportedFeaturedException
-from zeroconf import ServiceStateChange
-from zeroconf.asyncio import AsyncServiceInfo
 
 from .provider import Provider
 
 if TYPE_CHECKING:
+    from music_assistant_models.config_entries import ConfigEntry, PlayerConfig
     from music_assistant_models.player import Player, PlayerMedia
 
 # ruff: noqa: ARG001, ARG002

@@ -14,15 +14,15 @@ from typing import TYPE_CHECKING
 
 import aiofiles
 from aiohttp import ClientTimeout
-from music_assistant_models.enums import MediaType, StreamType, VolumeNormalizationMode
+from music_assistant_models.enums import ContentType, MediaType, StreamType, VolumeNormalizationMode
 from music_assistant_models.errors import (
     InvalidDataError,
     MediaNotFoundError,
     MusicAssistantError,
     ProviderUnavailableError,
 )
-from music_assistant_models.helpers.global_cache import set_global_cache_values
-from music_assistant_models.media_items import AudioFormat, ContentType
+from music_assistant_models.helpers import set_global_cache_values
+from music_assistant_models.streamdetails import AudioFormat
 
 from music_assistant.constants import (
     CONF_EQ_BASS,

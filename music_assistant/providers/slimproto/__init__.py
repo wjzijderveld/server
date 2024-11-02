@@ -20,20 +20,10 @@ from aioslimproto.models import Preset as SlimPreset
 from aioslimproto.models import VisualisationType as SlimVisualisationType
 from aioslimproto.server import SlimServer
 from music_assistant_models.config_entries import (
-    CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_CROSSFADE_DURATION,
-    CONF_ENTRY_ENFORCE_MP3,
-    CONF_ENTRY_EQ_BASS,
-    CONF_ENTRY_EQ_MID,
-    CONF_ENTRY_EQ_TREBLE,
-    CONF_ENTRY_HTTP_PROFILE_FORCED_2,
-    CONF_ENTRY_OUTPUT_CHANNELS,
-    CONF_ENTRY_SYNC_ADJUST,
     ConfigEntry,
     ConfigValueOption,
     ConfigValueType,
     PlayerConfig,
-    create_sample_rates_config_entry,
 )
 from music_assistant_models.enums import (
     ConfigEntryType,
@@ -53,9 +43,19 @@ from music_assistant.constants import (
     CONF_CROSSFADE,
     CONF_CROSSFADE_DURATION,
     CONF_ENFORCE_MP3,
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_CROSSFADE_DURATION,
+    CONF_ENTRY_ENFORCE_MP3,
+    CONF_ENTRY_EQ_BASS,
+    CONF_ENTRY_EQ_MID,
+    CONF_ENTRY_EQ_TREBLE,
+    CONF_ENTRY_HTTP_PROFILE_FORCED_2,
+    CONF_ENTRY_OUTPUT_CHANNELS,
+    CONF_ENTRY_SYNC_ADJUST,
     CONF_PORT,
     CONF_SYNC_ADJUST,
     VERBOSE_LOG_LEVEL,
+    create_sample_rates_config_entry,
 )
 from music_assistant.helpers.audio import get_ffmpeg_stream, get_player_filter_params
 from music_assistant.helpers.util import TaskManager

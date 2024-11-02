@@ -25,7 +25,6 @@ from music_assistant_models.errors import (
     MediaNotFoundError,
     ProviderUnavailableError,
 )
-from music_assistant_models.helpers.uri import parse_uri
 from music_assistant_models.media_items import (
     Artist,
     AudioFormat,
@@ -42,6 +41,7 @@ from music_assistant_models.streamdetails import StreamDetails
 
 from music_assistant.constants import MASS_LOGO, RESOURCES_DIR, VARIOUS_ARTISTS_FANART
 from music_assistant.helpers.tags import AudioTags, parse_tags
+from music_assistant.helpers.uri import parse_uri
 from music_assistant.models.music_provider import MusicProvider
 
 if TYPE_CHECKING:

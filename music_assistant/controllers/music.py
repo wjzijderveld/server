@@ -27,8 +27,7 @@ from music_assistant_models.errors import (
     MusicAssistantError,
     ProviderUnavailableError,
 )
-from music_assistant_models.helpers.global_cache import get_global_cache_value
-from music_assistant_models.helpers.uri import parse_uri
+from music_assistant_models.helpers import get_global_cache_value
 from music_assistant_models.media_items import (
     BrowseFolder,
     ItemMapping,
@@ -55,6 +54,7 @@ from music_assistant.constants import (
 from music_assistant.helpers.api import api_command
 from music_assistant.helpers.database import DatabaseConnection
 from music_assistant.helpers.datetime import utc_timestamp
+from music_assistant.helpers.uri import parse_uri
 from music_assistant.helpers.util import TaskManager
 from music_assistant.models.core_controller import CoreController
 

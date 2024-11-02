@@ -16,12 +16,7 @@ from typing import TYPE_CHECKING
 
 from aiofiles.os import wrap
 from aiohttp import web
-from music_assistant_models.config_entries import (
-    CONF_ENTRY_ENABLE_ICY_METADATA,
-    ConfigEntry,
-    ConfigValueOption,
-    ConfigValueType,
-)
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -39,6 +34,7 @@ from music_assistant.constants import (
     CONF_BIND_PORT,
     CONF_CROSSFADE,
     CONF_CROSSFADE_DURATION,
+    CONF_ENTRY_ENABLE_ICY_METADATA,
     CONF_HTTP_PROFILE,
     CONF_OUTPUT_CHANNELS,
     CONF_PUBLISH_IP,

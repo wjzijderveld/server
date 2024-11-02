@@ -7,13 +7,17 @@ from typing import TYPE_CHECKING, Any, cast
 
 import aiohttp.client_exceptions
 from music_assistant_models.config_entries import ConfigEntry
-from music_assistant_models.enums import ConfigEntryType, ExternalID, ProviderFeature
-from music_assistant_models.media_items import (
-    Album,
+from music_assistant_models.enums import (
     AlbumType,
-    Artist,
+    ConfigEntryType,
+    ExternalID,
     ImageType,
     LinkType,
+    ProviderFeature,
+)
+from music_assistant_models.media_items import (
+    Album,
+    Artist,
     MediaItemImage,
     MediaItemLink,
     MediaItemMetadata,

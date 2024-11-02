@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 import aiohttp.client_exceptions
 from music_assistant_models.config_entries import ConfigEntry
-from music_assistant_models.enums import ConfigEntryType, ExternalID, ProviderFeature
-from music_assistant_models.media_items import ImageType, MediaItemImage, MediaItemMetadata
+from music_assistant_models.enums import ConfigEntryType, ExternalID, ImageType, ProviderFeature
+from music_assistant_models.media_items import MediaItemImage, MediaItemMetadata
 
 from music_assistant.controllers.cache import use_cache
 from music_assistant.helpers.app_vars import app_var

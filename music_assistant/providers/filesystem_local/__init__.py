@@ -14,15 +14,20 @@ import shortuuid
 import xmltodict
 from aiofiles.os import wrap
 from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
-from music_assistant_models.enums import ConfigEntryType, ExternalID, ProviderFeature, StreamType
+from music_assistant_models.enums import (
+    ConfigEntryType,
+    ContentType,
+    ExternalID,
+    ImageType,
+    ProviderFeature,
+    StreamType,
+)
 from music_assistant_models.errors import MediaNotFoundError, MusicAssistantError, SetupFailedError
 from music_assistant_models.media_items import (
     Album,
     Artist,
     AudioFormat,
     BrowseFolder,
-    ContentType,
-    ImageType,
     ItemMapping,
     MediaItemImage,
     MediaItemType,

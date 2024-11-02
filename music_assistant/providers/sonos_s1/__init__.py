@@ -15,15 +15,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from music_assistant_models.config_entries import (
-    CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_ENFORCE_MP3,
-    CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
-    CONF_ENTRY_HTTP_PROFILE_FORCED_1,
-    ConfigEntry,
-    ConfigValueType,
-    create_sample_rates_config_entry,
-)
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
 from music_assistant_models.enums import (
     ConfigEntryType,
     PlayerFeature,
@@ -38,7 +30,16 @@ from soco import config as soco_config
 from soco import events_asyncio, zonegroupstate
 from soco.discovery import discover, scan_network
 
-from music_assistant.constants import CONF_CROSSFADE, CONF_ENFORCE_MP3, VERBOSE_LOG_LEVEL
+from music_assistant.constants import (
+    CONF_CROSSFADE,
+    CONF_ENFORCE_MP3,
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_ENFORCE_MP3,
+    CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
+    CONF_ENTRY_HTTP_PROFILE_FORCED_1,
+    VERBOSE_LOG_LEVEL,
+    create_sample_rates_config_entry,
+)
 from music_assistant.helpers.didl_lite import create_didl_metadata
 from music_assistant.models.player_provider import PlayerProvider
 

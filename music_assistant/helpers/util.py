@@ -422,7 +422,7 @@ async def load_provider_module(domain: str, requirements: list[str]) -> Provider
 
     @lru_cache
     def _get_provider_module(domain: str) -> ProviderModuleType:
-        return importlib.import_module(f".{domain}", ".providers")
+        return importlib.import_module(f".{domain}", "music_assistant.providers")
 
     # ensure module requirements are met
     for requirement in requirements:

@@ -6,13 +6,18 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import TYPE_CHECKING, cast
 
 from music_assistant_models.config_entries import ConfigEntry
-from music_assistant_models.enums import ConfigEntryType, LinkType, ProviderFeature, StreamType
+from music_assistant_models.enums import (
+    ConfigEntryType,
+    ContentType,
+    ImageType,
+    LinkType,
+    ProviderFeature,
+    StreamType,
+)
 from music_assistant_models.errors import MediaNotFoundError
 from music_assistant_models.media_items import (
     AudioFormat,
     BrowseFolder,
-    ContentType,
-    ImageType,
     MediaItemImage,
     MediaItemLink,
     MediaItemType,

@@ -6,21 +6,13 @@ import contextlib
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
-from music_assistant_models.enums import CacheCategory, ProviderFeature
+from music_assistant_models.enums import AlbumType, CacheCategory, MediaType, ProviderFeature
 from music_assistant_models.errors import (
     InvalidDataError,
     MediaNotFoundError,
     UnsupportedFeaturedException,
 )
-from music_assistant_models.media_items import (
-    Album,
-    AlbumType,
-    Artist,
-    ItemMapping,
-    MediaType,
-    Track,
-    UniqueList,
-)
+from music_assistant_models.media_items import Album, Artist, ItemMapping, Track, UniqueList
 
 from music_assistant.constants import DB_TABLE_ALBUM_ARTISTS, DB_TABLE_ALBUM_TRACKS, DB_TABLE_ALBUMS
 from music_assistant.controllers.media.base import MediaControllerBase

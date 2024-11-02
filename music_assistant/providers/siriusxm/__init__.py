@@ -9,6 +9,7 @@ from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
+    ImageType,
     LinkType,
     MediaType,
     ProviderFeature,
@@ -17,7 +18,6 @@ from music_assistant_models.enums import (
 from music_assistant_models.errors import LoginFailed, MediaNotFoundError
 from music_assistant_models.media_items import (
     AudioFormat,
-    ImageType,
     ItemMapping,
     MediaItemImage,
     MediaItemLink,

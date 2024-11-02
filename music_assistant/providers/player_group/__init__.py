@@ -15,16 +15,10 @@ from typing import TYPE_CHECKING, Final, cast
 import shortuuid
 from aiohttp import web
 from music_assistant_models.config_entries import (
-    BASE_PLAYER_CONFIG_ENTRIES,
-    CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_CROSSFADE_DURATION,
-    CONF_ENTRY_FLOW_MODE_ENFORCED,
-    CONF_ENTRY_PLAYER_ICON_GROUP,
     ConfigEntry,
     ConfigValueOption,
     ConfigValueType,
     PlayerConfig,
-    create_sample_rates_config_entry,
 )
 from music_assistant_models.enums import (
     ConfigEntryType,
@@ -45,14 +39,20 @@ from music_assistant_models.media_items import AudioFormat
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
 
 from music_assistant.constants import (
+    BASE_PLAYER_CONFIG_ENTRIES,
     CONF_CROSSFADE,
     CONF_CROSSFADE_DURATION,
     CONF_ENABLE_ICY_METADATA,
     CONF_ENFORCE_MP3,
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_CROSSFADE_DURATION,
+    CONF_ENTRY_FLOW_MODE_ENFORCED,
+    CONF_ENTRY_PLAYER_ICON_GROUP,
     CONF_FLOW_MODE,
     CONF_GROUP_MEMBERS,
     CONF_HTTP_PROFILE,
     CONF_SAMPLE_RATES,
+    create_sample_rates_config_entry,
 )
 from music_assistant.controllers.streams import DEFAULT_STREAM_HEADERS
 from music_assistant.helpers.ffmpeg import get_ffmpeg_stream

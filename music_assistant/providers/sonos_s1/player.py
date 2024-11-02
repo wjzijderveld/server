@@ -30,8 +30,9 @@ from soco.core import (
 from soco.data_structures import DidlAudioBroadcast, DidlPlaylistContainer
 
 from music_assistant.constants import VERBOSE_LOG_LEVEL
-from music_assistant.helpers import SonosUpdateError, soco_error
 from music_assistant.helpers.datetime import utc
+
+from .helpers import SonosUpdateError, soco_error
 
 if TYPE_CHECKING:
     from soco.events_base import Event as SonosEvent

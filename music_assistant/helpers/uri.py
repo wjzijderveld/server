@@ -6,8 +6,12 @@ import re
 
 from music_assistant_models.enums import MediaType
 from music_assistant_models.errors import InvalidProviderID, InvalidProviderURI
+from music_assistant_models.helpers import create_uri as create_uri_org
 
 base62_length22_id_pattern = re.compile(r"^[a-zA-Z0-9]{22}$")
+
+# create alias to original create_uri function
+create_uri = create_uri_org
 
 
 def valid_base62_length22(item_id: str) -> bool:

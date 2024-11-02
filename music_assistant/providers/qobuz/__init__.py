@@ -10,7 +10,15 @@ from typing import TYPE_CHECKING
 
 from aiohttp import client_exceptions
 from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
-from music_assistant_models.enums import ConfigEntryType, ExternalID, ProviderFeature, StreamType
+from music_assistant_models.enums import (
+    AlbumType,
+    ConfigEntryType,
+    ContentType,
+    ExternalID,
+    ImageType,
+    ProviderFeature,
+    StreamType,
+)
 from music_assistant_models.errors import (
     InvalidDataError,
     LoginFailed,
@@ -19,11 +27,8 @@ from music_assistant_models.errors import (
 )
 from music_assistant_models.media_items import (
     Album,
-    AlbumType,
     Artist,
     AudioFormat,
-    ContentType,
-    ImageType,
     MediaItemImage,
     MediaItemType,
     MediaType,
