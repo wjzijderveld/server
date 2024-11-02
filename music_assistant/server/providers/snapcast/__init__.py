@@ -559,6 +559,7 @@ class SnapCastProvider(PlayerProvider):
                 while stream.status != "idle":
                     await asyncio.sleep(0.25)
                 player.state = PlayerState.IDLE
+                player.elapsed_time = time.time() - player.elapsed_time_last_updated
                 self.mass.players.update(player_id)
                 self._set_childs_state(player_id)
             finally:
