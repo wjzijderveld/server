@@ -23,7 +23,8 @@ ifaddr==0.2.0
 mashumaro==3.14
 memory-tempfile==2.2.3
 music-assistant-frontend==v2.9.14
-orjson==3.10.10
+music-assistant-models==1.0.3
+orjson==3.10.7
 pillow==11.0.0
 pkce==1.0.3
 plexapi==4.15.16
@@ -46,4 +47,4 @@ xmltodict==0.14.2
 yt-dlp==2024.10.7
 yt-dlp-youtube-accesstoken==0.1.1
 ytmusicapi==1.8.1
-zeroconf==0.136.0
+zeroconf==0.135.0

@@ -21,6 +21,6 @@ echo "Installing development dependencies..."
 
 pip install --upgrade pip
 pip install --upgrade uv
-uv pip install -e ".[server]"
+uv pip install -e "."
 uv pip install -e ".[test]"
 pre-commit install
