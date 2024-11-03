@@ -39,7 +39,7 @@ from music_assistant_models.media_items import (
 )
 from music_assistant_models.streamdetails import StreamDetails
 
-from music_assistant.constants import MASS_LOGO, RESOURCES_DIR, VARIOUS_ARTISTS_FANART
+from music_assistant.constants import MASS_LOGO, VARIOUS_ARTISTS_FANART
 from music_assistant.helpers.tags import AudioTags, parse_tags
 from music_assistant.helpers.uri import parse_uri
 from music_assistant.models.music_provider import MusicProvider
@@ -84,14 +84,14 @@ COLLAGE_IMAGE_PLAYLISTS = (ALL_FAVORITE_TRACKS, RANDOM_TRACKS)
 
 DEFAULT_THUMB = MediaItemImage(
     type=ImageType.THUMB,
-    path=MASS_LOGO,
+    path="logo.png",
     provider="builtin",
     remotely_accessible=False,
 )
 
 DEFAULT_FANART = MediaItemImage(
     type=ImageType.FANART,
-    path=VARIOUS_ARTISTS_FANART,
+    path="fanart.jpg",
     provider="builtin",
     remotely_accessible=False,
 )
@@ -143,20 +143,21 @@ class BuiltinProvider(MusicProvider):
         if not await asyncio.to_thread(os.path.exists, self._playlists_dir):
             await asyncio.to_thread(os.mkdir, self._playlists_dir)
         await super().loaded_in_mass()
-        # migrate old image path
-        # TODO: remove this after 2.3+ release
-        old_path = (
-            "/usr/local/lib/python3.12/site-packages/music_assistant/server/helpers/resources"
-        )
-        new_path = str(RESOURCES_DIR)
-        query = (
-            "UPDATE playlists SET metadata = "
-            f"REPLACE (metadata, '{old_path}', '{new_path}') "
-            f"WHERE playlists.metadata LIKE '%{old_path}%'"
-        )
-        if self.mass.music.database:
-            await self.mass.music.database.execute(query)
-            await self.mass.music.database.commit()
+        # migrate old image path from absolute to relative
+        # TODO: remove this after 2.5+ release
+        for old_path in (
+            "/usr/local/lib/python3.12/site-packages/music_assistant/server/helpers/resources/",
+            "/app/venv/lib/python3.12/site-packages/music_assistant/server/helpers/resources/",
+            "/Users/marcelvanderveldt/Workdir/music-assistant/core/music_assistant/server/helpers/resources/",
+        ):
+            query = (
+                "UPDATE playlists SET metadata = "
+                f"REPLACE (metadata, '{old_path}', '') "
+                f"WHERE playlists.metadata LIKE '%{old_path}%'"
+            )
+            if self.mass.music.database:
+                await self.mass.music.database.execute(query)
+                await self.mass.music.database.commit()
 
     @property
     def is_streaming_provider(self) -> bool:
@@ -507,6 +508,19 @@ class BuiltinProvider(MusicProvider):
                 ]
             )
         return media_item
+
+    async def resolve_image(self, path: str) -> str | bytes:
+        """
+        Resolve an image from an image path.
+
+        This either returns (a generator to get) raw bytes of the image or
+        a string with an http(s) URL or local path that is accessible from the server.
+        """
+        if path == "logo.png":
+            return MASS_LOGO
+        if path in ("fanart.jpg", "fallback_fanart.jpeg"):
+            return VARIOUS_ARTISTS_FANART
+        return path
 
     async def _get_media_info(self, url: str, force_refresh: bool = False) -> AudioTags:
         """Retrieve mediainfo for url."""

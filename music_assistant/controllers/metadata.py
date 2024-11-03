@@ -181,6 +181,18 @@ class MetaDataController(CoreController):
         # just tun the scan for missing metadata once at startup
         # TODO: allows to enable/disable this in the UI and configure interval/time
         self._missing_metadata_scan_task = self.mass.create_task(self._scan_missing_metadata())
+        # migrate old image path for collage images from absolute to relative
+        # TODO: remove this after 2.5+ release
+        old_path = f"{self.mass.storage_path}/collage_images/"
+        new_path = "/collage/"
+        query = (
+            "UPDATE playlists SET metadata = "
+            f"REPLACE (metadata, '{old_path}', '{new_path}') "
+            f"WHERE playlists.metadata LIKE '%{old_path}%'"
+        )
+        if self.mass.music.database:
+            await self.mass.music.database.execute(query)
+            await self.mass.music.database.commit()
 
     async def close(self) -> None:
         """Handle logic on server stop."""
@@ -353,6 +365,9 @@ class MetaDataController(CoreController):
         """Get/create thumbnail image for path (image url or local path)."""
         if not self.mass.get_provider(provider) and not path.startswith("http"):
             raise ProviderUnavailableError
+        if provider == "builtin" and path.startswith("/collage/"):
+            # special case for collage images
+            path = os.path.join(self._collage_images_dir, path.split("/collage/")[-1])
         thumbnail = await get_image_thumb(
             self.mass, path, size=size, provider=provider, image_format=image_format
         )
@@ -391,7 +406,7 @@ class MetaDataController(CoreController):
     async def create_collage_image(
         self,
         images: list[MediaItemImage],
-        img_path: str,
+        filename: str,
         fanart: bool = False,
     ) -> MediaItemImage | None:
         """Create collage thumb/fanart image for (in-library) playlist."""
@@ -409,12 +424,13 @@ class MetaDataController(CoreController):
             dimensions = (2500, 1750) if fanart else (1500, 1500)
             img_data = await create_collage(self.mass, images, dimensions)
             # always overwrite existing path
-            async with aiofiles.open(img_path, "wb") as _file:
+            file_path = os.path.join(self._collage_images_dir, filename)
+            async with aiofiles.open(file_path, "wb") as _file:
                 await _file.write(img_data)
             del img_data
             return MediaItemImage(
                 type=ImageType.FANART if fanart else ImageType.THUMB,
-                path=img_path,
+                path=f"/collage/{filename}",
                 provider="builtin",
                 remotely_accessible=False,
             )
@@ -641,13 +657,9 @@ class MetaDataController(CoreController):
         # thumb image
         thumb_image = next((x for x in cur_images if x.type == ImageType.THUMB), None)
         if not thumb_image or self._collage_images_dir in thumb_image.path:
-            thumb_image_path = (
-                thumb_image.path
-                if thumb_image
-                else os.path.join(self._collage_images_dir, f"{uuid4().hex}_thumb.jpg")
-            )
+            img_filename = thumb_image.path if thumb_image else f"{uuid4().hex}_thumb.jpg"
             if collage_thumb_image := await self.create_collage_image(
-                all_playlist_tracks_images, thumb_image_path
+                all_playlist_tracks_images, img_filename
             ):
                 new_images.append(collage_thumb_image)
         elif thumb_image:
@@ -656,13 +668,9 @@ class MetaDataController(CoreController):
         # fanart image
         fanart_image = next((x for x in cur_images if x.type == ImageType.FANART), None)
         if not fanart_image or self._collage_images_dir in fanart_image.path:
-            fanart_image_path = (
-                fanart_image.path
-                if fanart_image
-                else os.path.join(self._collage_images_dir, f"{uuid4().hex}_fanart.jpg")
-            )
+            img_filename = thumb_image.path if thumb_image else f"{uuid4().hex}_fanart.jpg"
             if collage_fanart_image := await self.create_collage_image(
-                all_playlist_tracks_images, fanart_image_path, fanart=True
+                all_playlist_tracks_images, img_filename, fanart=True
             ):
                 new_images.append(collage_fanart_image)
         elif fanart_image:
