@@ -14,7 +14,7 @@ ADD dist dist
 
 # pre-install ALL requirements
 # comes at a cost of a slightly larger image size but is faster to start
-# and has less dependencies to install at runtime
+# because we do not have to install dependencies at runtime
 COPY requirements_all.txt .
 RUN uv pip install \
     --no-cache \
