@@ -172,7 +172,7 @@ class MetaDataController(CoreController):
             # silence PIL logger
             logging.getLogger("PIL").setLevel(logging.WARNING)
         # make sure that our directory with collage images exists
-        self._collage_images_dir = os.path.join(self.mass.storage_path, "collage_images")
+        self._collage_images_dir = os.path.join(self.mass.cache_path, "collage_images")
         if not await asyncio.to_thread(os.path.exists, self._collage_images_dir):
             await asyncio.to_thread(os.mkdir, self._collage_images_dir)
         self.mass.streams.register_dynamic_route("/imageproxy", self.handle_imageproxy)

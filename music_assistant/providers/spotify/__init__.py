@@ -90,7 +90,6 @@ SCOPE = [
 
 CALLBACK_REDIRECT_URL = "https://music-assistant.io/callback"
 
-CACHE_DIR = "/tmp/spotify_cache"  # noqa: S108
 LIKED_SONGS_FAKE_PLAYLIST_ID_PREFIX = "liked_songs"
 SUPPORTED_FEATURES = (
     ProviderFeature.LIBRARY_ARTISTS,
@@ -246,7 +245,7 @@ class SpotifyProvider(MusicProvider):
 
     async def handle_async_init(self) -> None:
         """Handle async initialization of the provider."""
-        self.config_dir = os.path.join(self.mass.storage_path, self.instance_id)
+        self.cache_dir = os.path.join(self.mass.cache_path, self.instance_id)
         self.throttler = ThrottlerManager(rate_limit=1, period=2)
         if self.config.get_value(CONF_CLIENT_ID):
             # loosen the throttler a bit when a custom client id is used
@@ -558,9 +557,7 @@ class SpotifyProvider(MusicProvider):
         args = [
             librespot,
             "--cache",
-            CACHE_DIR,
-            "--system-cache",
-            self.config_dir,
+            self.cache_dir,
             "--cache-size-limit",
             "1G",
             "--passthrough",
@@ -824,8 +821,8 @@ class SpotifyProvider(MusicProvider):
         librespot = await self.get_librespot_binary()
         args = [
             librespot,
-            "--system-cache",
-            self.config_dir,
+            "--cache",
+            self.cache_dir,
             "--check-auth",
         ]
         ret_code, stdout = await check_output(*args)
@@ -833,11 +830,7 @@ class SpotifyProvider(MusicProvider):
             # cached librespot creds are invalid, re-authenticate
             # we can use the check-token option to send a new token to librespot
             # librespot will then get its own token from spotify (somehow) and cache that.
-            args = [
-                librespot,
-                "--system-cache",
-                self.config_dir,
-                "--check-auth",
+            args += [
                 "--access-token",
                 auth_info["access_token"],
             ]

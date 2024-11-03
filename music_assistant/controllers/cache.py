@@ -210,7 +210,7 @@ class CacheController(CoreController):
 
     async def _setup_database(self) -> None:
         """Initialize database."""
-        db_path = os.path.join(self.mass.storage_path, "cache.db")
+        db_path = os.path.join(self.mass.cache_path, "cache.db")
         self.database = DatabaseConnection(db_path)
         await self.database.setup()
 
