@@ -534,7 +534,7 @@ class PlayerQueuesController(CoreController):
         else:
             item_index = item_id_or_index
         queue = self._queues[queue_id]
-        if item_index <= queue.index_in_buffer:
+        if queue.index_in_buffer is not None and item_index <= queue.index_in_buffer:
             # ignore request if track already loaded in the buffer
             # the frontend should guard so this is just in case
             self.logger.warning("delete requested for item already loaded in buffer")
@@ -1485,7 +1485,7 @@ class PlayerQueuesController(CoreController):
                 return
             if queue.next_item is not None:
                 return
-            if not (queue.current_index >= len(self._queue_items[queue.queue_id]) - 1):
+            if not ((queue.current_index or 0) >= len(self._queue_items[queue.queue_id]) - 1):
                 return
         self.logger.info("End of queue reached, clearing items")
         self.clear(queue.queue_id)
