@@ -805,4 +805,9 @@ class MetadataLookupQueue(asyncio.Queue):
 
     def pop(self, item: str) -> None:
         """Remove item from queue."""
-        self._queue.remove(item)
+        if self.exists(item):
+            self._queue.remove(item)
+
+    def exists(self, item: str) -> bool:
+        """Check if item exists in queue."""
+        return item in self._queue
