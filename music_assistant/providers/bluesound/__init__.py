@@ -186,10 +186,10 @@ class BluesoundPlayer:
 
         # TODO fix pairing
 
-        if self.sync_status.master is None:
-            if self.sync_status.slaves:
+        if self.sync_status.leader is None:
+            if self.sync_status.followers:
                 self.mass_player.group_childs = (
-                    self.sync_status.slaves if len(self.sync_status.slaves) > 1 else set()
+                    self.sync_status.followers if len(self.sync_status.followers) > 1 else set()
                 )
                 self.mass_player.synced_to = None
 
@@ -206,8 +206,8 @@ class BluesoundPlayer:
 
         else:
             self.mass_player.group_childs = set()
-            self.mass_player.synced_to = self.sync_status.master
-            self.mass_player.active_source = self.sync_status.master
+            self.mass_player.synced_to = self.sync_status.leader
+            self.mass_player.active_source = self.sync_status.leader
 
         self.mass_player.state = PLAYBACK_STATE_MAP[self.status.state]
         self.mass.players.update(self.player_id)
