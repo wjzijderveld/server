@@ -134,21 +134,32 @@ class SonosPlayerProvider(PlayerProvider):
         return (
             *base_entries,
             ConfigEntry(
+                key="airplay_detected",
+                type=ConfigEntryType.BOOLEAN,
+                label="airplay_detected",
+                hidden=True,
+                required=False,
+                default_value=sonos_player.get_linked_airplay_player(False) is not None,
+            ),
+            ConfigEntry(
                 key=CONF_AIRPLAY_MODE,
                 type=ConfigEntryType.BOOLEAN,
                 label="Enable Airplay mode (experimental)",
                 description="Almost all newer Sonos speakers have Airplay support. "
                 "If you have the Airplay provider enabled in Music Assistant, "
-                "your Sonos speakers will also be detected as Airplay speakers, meaning "
+                "your Sonos speaker will also be detected as a Airplay speaker, meaning "
                 "you can group them with other Airplay speakers.\n\n"
                 "By default, Music Assistant uses the Sonos protocol for playback but with this "
                 "feature enabled, it will use the Airplay protocol instead by redirecting "
                 "the playback related commands to the linked Airplay player in Music Assistant, "
                 "allowing you to mix and match Sonos speakers with Airplay speakers. \n\n"
+                "NOTE: You need to have the Airplay provider enabled. "
+                "Also make sure that the Airplay version of this player is enabled. \n\n"
                 "TIP: When this feature is enabled, it make sense to set the underlying airplay "
                 "players to hide in the UI in the player settings to prevent duplicate players.",
                 required=False,
                 default_value=False,
+                depends_on="airplay_detected",
                 hidden=SonosCapability.AIRPLAY
                 not in sonos_player.discovery_info["device"]["capabilities"],
             ),
@@ -224,7 +235,7 @@ class SonosPlayerProvider(PlayerProvider):
             raise PlayerCommandFailed(msg)
         # for now always reset the active session
         sonos_player.client.player.group.active_session_id = None
-        if airplay := sonos_player.get_linked_airplay_player(True):
+        if airplay := sonos_player.get_linked_airplay_player(True, True):
             # linked airplay player is active, redirect the command
             self.logger.debug("Redirecting PLAY_MEDIA command to linked airplay player.")
             mass_player.active_source = airplay.active_source

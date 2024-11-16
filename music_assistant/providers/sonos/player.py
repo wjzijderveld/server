@@ -91,7 +91,7 @@ class SonosPlayer:
             return None
         if not airplay_player.available:
             return None
-        if active_only and not airplay_player.powered:
+        if active_only and not airplay_player.powered and not airplay_player.group_childs:
             return None
         return airplay_player
 
@@ -182,7 +182,8 @@ class SonosPlayer:
         ) and airplay.state != PlayerState.IDLE:
             # linked airplay player is active, redirect the command
             self.logger.debug("Redirecting STOP command to linked airplay player.")
-            await self.mass.players.cmd_stop(airplay.player_id)
+            if player_provider := self.mass.get_provider(airplay.provider):
+                await player_provider.cmd_stop(airplay.player_id)
             return
         try:
             await self.client.player.group.stop()
@@ -200,7 +201,8 @@ class SonosPlayer:
         ) and airplay.state != PlayerState.IDLE:
             # linked airplay player is active, redirect the command
             self.logger.debug("Redirecting PLAY command to linked airplay player.")
-            await self.mass.players.cmd_play(airplay.player_id)
+            if player_provider := self.mass.get_provider(airplay.provider):
+                await player_provider.cmd_play(airplay.player_id)
             return
         await self.client.player.group.play()
 
@@ -214,7 +216,8 @@ class SonosPlayer:
         ) and airplay.state != PlayerState.IDLE:
             # linked airplay player is active, redirect the command
             self.logger.debug("Redirecting PAUSE command to linked airplay player.")
-            await self.mass.players.cmd_pause(airplay.player_id)
+            if player_provider := self.mass.get_provider(airplay.provider):
+                await player_provider.cmd_pause(airplay.player_id)
             return
         await self.client.player.group.pause()
 
@@ -264,7 +267,7 @@ class SonosPlayer:
             self.mass_player.synced_to = active_group.coordinator_id
             self.mass_player.active_source = active_group.coordinator_id
 
-        if airplay := self.get_linked_airplay_player(True):
+        if airplay := self.get_linked_airplay_player(True, True):
             # linked airplay player is active, update media from there
             self.mass_player.state = airplay.state
             self.mass_player.powered = airplay.powered
