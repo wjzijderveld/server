@@ -52,6 +52,7 @@ from .const import (
     CONF_PASSWORD,
     CONF_READ_AHEAD_BUFFER,
     FALLBACK_VOLUME,
+    IGNORE_RAOP_SONOS_MODELS,
 )
 from .helpers import convert_airplay_volume, get_model_from_am, get_primary_ip_address
 from .player import AirPlayPlayer
@@ -450,17 +451,30 @@ class AirplayProvider(PlayerProvider):
             return
         self.logger.debug("Discovered Airplay device %s on %s", display_name, address)
         manufacturer, model = get_model_from_am(info.decoded_properties.get("am"))
+
+        default_enabled = not info.server.startswith("Sonos-")
+        if not self.mass.config.get_raw_player_config_value(player_id, "enabled", default_enabled):
+            self.logger.debug("Ignoring %s in discovery as it is disabled.", display_name)
+            return
+
         if "apple tv" in model.lower():
             # For now, we ignore the Apple TV until we implement the authentication.
             # maybe we can simply use pyatv only for this part?
             # the cliraop application has already been prepared to accept the secret.
-            self.logger.debug(
-                "Ignoring %s in discovery due to authentication requirement.", display_name
+            self.logger.info(
+                "Ignoring %s in discovery because it is not yet supported.", display_name
             )
             return
-        if not self.mass.config.get_raw_player_config_value(player_id, "enabled", True):
-            self.logger.debug("Ignoring %s in discovery as it is disabled.", display_name)
+        if model in IGNORE_RAOP_SONOS_MODELS:
+            # for now completely ignore the sonos models that have broken RAOP support
+            # its very much unlikely that this will ever be fixed by Sonos
+            # revisit this once/if we have support for airplay 2.
+            self.logger.info(
+                "Ignoring %s in discovery as it is a known Sonos model with broken RAOP support.",
+                display_name,
+            )
             return
+
         self._players[player_id] = AirPlayPlayer(self, player_id, info, address)
         if not (volume := await self.mass.cache.get(player_id, base_key=CACHE_KEY_PREV_VOLUME)):
             volume = FALLBACK_VOLUME

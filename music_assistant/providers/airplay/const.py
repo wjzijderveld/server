@@ -29,3 +29,15 @@ AIRPLAY_FLOW_PCM_FORMAT = AudioFormat(
 AIRPLAY_PCM_FORMAT = AudioFormat(
     content_type=ContentType.from_bit_depth(16), sample_rate=44100, bit_depth=16
 )
+
+IGNORE_RAOP_SONOS_MODELS = (
+    # A recent fw update of newer gen Sonos speakers block RAOP (airplay 1) support,
+    # basically rendering our airplay implementation useless on these devices.
+    # This list contains the models that are known to have this issue.
+    # Hopefully the issue won't spread to other models.
+    "Era 100",
+    "Era 300",
+    "Move 2",
+    "Roam 2",
+    "Arc Ultra",
+)
