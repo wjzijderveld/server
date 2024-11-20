@@ -127,7 +127,7 @@ class MyDemoMusicprovider(MusicProvider):
     """
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         # MANDATORY
         # you should return a tuple of provider-level features

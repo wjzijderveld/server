@@ -26,10 +26,10 @@ from music_assistant.constants import CONF_USERNAME
 from music_assistant.helpers.throttle_retry import Throttler
 from music_assistant.models.music_provider import MusicProvider
 
-SUPPORTED_FEATURES = (
+SUPPORTED_FEATURES = {
     ProviderFeature.LIBRARY_RADIOS,
     ProviderFeature.BROWSE,
-)
+}
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -82,7 +82,7 @@ class TuneInProvider(MusicProvider):
     _throttler: Throttler
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         return SUPPORTED_FEATURES
 

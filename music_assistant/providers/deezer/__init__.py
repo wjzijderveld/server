@@ -48,7 +48,7 @@ from music_assistant.models.music_provider import MusicProvider
 
 from .gw_client import GWClient
 
-SUPPORTED_FEATURES = (
+SUPPORTED_FEATURES = {
     ProviderFeature.LIBRARY_ARTISTS,
     ProviderFeature.LIBRARY_ALBUMS,
     ProviderFeature.LIBRARY_TRACKS,
@@ -68,7 +68,7 @@ SUPPORTED_FEATURES = (
     ProviderFeature.PLAYLIST_CREATE,
     ProviderFeature.RECOMMENDATIONS,
     ProviderFeature.SIMILAR_TRACKS,
-)
+}
 
 
 @dataclass
@@ -190,7 +190,7 @@ class DeezerProvider(MusicProvider):
         await self.gw_client.setup()
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         return SUPPORTED_FEATURES
 

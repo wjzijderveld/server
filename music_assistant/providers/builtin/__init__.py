@@ -165,9 +165,9 @@ class BuiltinProvider(MusicProvider):
         return False
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return (
+        return {
             ProviderFeature.BROWSE,
             ProviderFeature.LIBRARY_TRACKS,
             ProviderFeature.LIBRARY_RADIOS,
@@ -176,7 +176,7 @@ class BuiltinProvider(MusicProvider):
             ProviderFeature.LIBRARY_RADIOS_EDIT,
             ProviderFeature.PLAYLIST_CREATE,
             ProviderFeature.PLAYLIST_TRACKS_EDIT,
-        )
+        }
 
     async def get_track(self, prov_track_id: str) -> Track:
         """Get full track details by id."""

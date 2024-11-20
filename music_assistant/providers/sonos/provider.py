@@ -47,9 +47,9 @@ class SonosPlayerProvider(PlayerProvider):
     sonos_players: dict[str, SonosPlayer]
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return (ProviderFeature.SYNC_PLAYERS,)
+        return {ProviderFeature.SYNC_PLAYERS}
 
     async def handle_async_init(self) -> None:
         """Handle async initialization of the provider."""
@@ -102,7 +102,7 @@ class SonosPlayerProvider(PlayerProvider):
                     mass_player.device_info = DeviceInfo(
                         model=mass_player.device_info.model,
                         manufacturer=mass_player.device_info.manufacturer,
-                        address=str(cur_address),
+                        ip_address=str(cur_address),
                     )
                 if not sonos_player.connected:
                     self.logger.debug("Player back online: %s", mass_player.display_name)
@@ -188,27 +188,27 @@ class SonosPlayerProvider(PlayerProvider):
         if sonos_player := self.sonos_players[player_id]:
             await sonos_player.cmd_volume_mute(muted)
 
-    async def cmd_sync(self, player_id: str, target_player: str) -> None:
-        """Handle SYNC command for given player.
+    async def cmd_group(self, player_id: str, target_player: str) -> None:
+        """Handle GROUP command for given player.
 
         Join/add the given player(id) to the given (master) player/sync group.
 
             - player_id: player_id of the player to handle the command.
             - target_player: player_id of the syncgroup master or group player.
         """
-        await self.cmd_sync_many(target_player, [player_id])
+        await self.cmd_group_many(target_player, [player_id])
 
-    async def cmd_sync_many(self, target_player: str, child_player_ids: list[str]) -> None:
+    async def cmd_group_many(self, target_player: str, child_player_ids: list[str]) -> None:
         """Create temporary sync group by joining given players to target player."""
         sonos_player = self.sonos_players[target_player]
         await sonos_player.client.player.group.modify_group_members(
             player_ids_to_add=child_player_ids, player_ids_to_remove=[]
         )
 
-    async def cmd_unsync(self, player_id: str) -> None:
-        """Handle UNSYNC command for given player.
+    async def cmd_ungroup(self, player_id: str) -> None:
+        """Handle UNGROUP command for given player.
 
-        Remove the given player from any syncgroups it currently is synced to.
+        Remove the given player from any (sync)groups it currently is grouped to.
 
             - player_id: player_id of the player to handle the command.
         """
@@ -244,7 +244,7 @@ class SonosPlayerProvider(PlayerProvider):
                 x for x in sonos_player.client.player.group.player_ids if x != player_id
             ]
             if group_childs:
-                await self.mass.players.cmd_unsync_many(group_childs)
+                await self.mass.players.cmd_ungroup_many(group_childs)
             await self.mass.players.play_media(airplay.player_id, media)
             if group_childs:
                 # ensure master player is first in the list

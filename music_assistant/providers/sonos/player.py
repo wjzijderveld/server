@@ -128,9 +128,12 @@ class SonosPlayer:
             device_info=DeviceInfo(
                 model=self.discovery_info["device"]["modelDisplayName"],
                 manufacturer=self.prov.manifest.name,
-                address=self.ip_address,
+                ip_address=self.ip_address,
             ),
-            supported_features=tuple(supported_features),
+            supported_features=supported_features,
+            # NOTE: strictly taken we can have multiple sonos households
+            # but for now we assume we only have one
+            can_group_with={self.prov.instance_id},
         )
         self.update_attributes()
         await self.mass.players.register_or_update(mass_player)
@@ -247,11 +250,10 @@ class SonosPlayer:
         if self.client.player.is_coordinator:
             # player is group coordinator
             active_group = self.client.player.group
-            self.mass_player.group_childs = (
-                set(self.client.player.group_members)
-                if len(self.client.player.group_members) > 1
-                else set()
-            )
+            if len(self.client.player.group_members) > 1:
+                self.mass_player.group_childs.set(self.client.player.group_members)
+            else:
+                self.mass_player.group_childs.clear()
             self.mass_player.synced_to = None
         else:
             # player is group child (synced to another player)
@@ -260,7 +262,7 @@ class SonosPlayer:
                 # handle race condition where the group parent is not yet discovered
                 return
             active_group = group_parent.client.player.group
-            self.mass_player.group_childs = set()
+            self.mass_player.group_childs.clear()
             self.mass_player.synced_to = active_group.coordinator_id
             self.mass_player.active_source = active_group.coordinator_id
 

@@ -37,7 +37,6 @@ from music_assistant_models.media_items import (
     AudioFormat,
     ItemMapping,
     MediaItem,
-    MediaItemChapter,
     MediaItemImage,
     Playlist,
     ProviderMapping,
@@ -380,9 +379,9 @@ class PlexProvider(MusicProvider):
             raise SetupFailedError from err
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return a list of supported features."""
-        return (
+        return {
             ProviderFeature.LIBRARY_ARTISTS,
             ProviderFeature.LIBRARY_ALBUMS,
             ProviderFeature.LIBRARY_TRACKS,
@@ -390,7 +389,7 @@ class PlexProvider(MusicProvider):
             ProviderFeature.BROWSE,
             ProviderFeature.SEARCH,
             ProviderFeature.ARTIST_ALBUMS,
-        )
+        }
 
     @property
     def is_streaming_provider(self) -> bool:
@@ -720,17 +719,7 @@ class PlexProvider(MusicProvider):
         if plex_track.duration:
             track.duration = int(plex_track.duration / 1000)
         if plex_track.chapters:
-            track.metadata.chapters = UniqueList(
-                [
-                    MediaItemChapter(
-                        chapter_id=plex_chapter.id,
-                        position_start=plex_chapter.start,
-                        position_end=plex_chapter.end,
-                        title=plex_chapter.title,
-                    )
-                    for plex_chapter in plex_track.chapters
-                ]
-            )
+            pass  # TODO!
 
         return track
 

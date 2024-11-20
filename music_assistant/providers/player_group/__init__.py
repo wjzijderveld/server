@@ -158,9 +158,9 @@ class PlayerGroupProvider(PlayerProvider):
         ]
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return (ProviderFeature.REMOVE_PLAYER,)
+        return {ProviderFeature.REMOVE_PLAYER}
 
     async def loaded_in_mass(self) -> None:
         """Call after the provider has been loaded."""
@@ -279,22 +279,18 @@ class PlayerGroupProvider(PlayerProvider):
             # ensure we filter invalid members
             members = self._filter_members(config.get_value(CONF_GROUP_TYPE), members)
             if group_player := self.mass.players.get(config.player_id):
-                group_player.group_childs = members
+                group_player.group_childs.set(members)
                 if group_player.powered:
                     # power on group player (which will also resync) if needed
                     await self.cmd_power(group_player.player_id, True)
         if f"values/{CONFIG_ENTRY_DYNAMIC_MEMBERS.key}" in changed_keys:
             # dynamic members feature changed
             if group_player := self.mass.players.get(config.player_id):
-                if PlayerFeature.SYNC in group_player.supported_features:
-                    group_player.supported_features = tuple(
-                        x for x in group_player.supported_features if x != PlayerFeature.SYNC
-                    )
+                if PlayerFeature.SET_MEMBERS in group_player.supported_features:
+                    group_player.supported_features.remove(PlayerFeature.SET_MEMBERS)
+                    group_player.can_group_with.clear()
                 else:
-                    group_player.supported_features = (
-                        *group_player.supported_features,
-                        PlayerFeature.SYNC,
-                    )
+                    group_player.supported_features.add(PlayerFeature.SET_MEMBERS)
         await super().on_player_config_change(config, changed_keys)
 
     async def cmd_stop(self, player_id: str) -> None:
@@ -352,13 +348,13 @@ class PlayerGroupProvider(PlayerProvider):
             group_member_ids = self.mass.config.get_raw_player_config_value(
                 player_id, CONF_GROUP_MEMBERS, []
             )
-            group_player.group_childs = {
+            group_player.group_childs.set(
                 x
                 for x in group_member_ids
                 if (child_player := self.mass.players.get(x))
                 and child_player.available
                 and child_player.enabled
-            }
+            )
 
         if powered:
             # handle TURN_ON of the group player by turning on all members
@@ -382,7 +378,7 @@ class PlayerGroupProvider(PlayerProvider):
         else:
             # handle TURN_OFF of the group player by turning off all members
             # optimistically set the group state to prevent race conditions
-            # with the unsync command
+            # with the ungroup command
             group_player.powered = False
             for member in self.mass.players.iter_group_members(
                 group_player, only_powered=True, active_only=True
@@ -401,7 +397,7 @@ class PlayerGroupProvider(PlayerProvider):
         self.mass.players.update(group_player.player_id)
         if not powered:
             # reset the group members when powered off
-            group_player.group_childs = set(
+            group_player.group_childs.set(
                 self.mass.config.get_raw_player_config_value(player_id, CONF_GROUP_MEMBERS, [])
             )
 
@@ -549,11 +545,11 @@ class PlayerGroupProvider(PlayerProvider):
             return
         if group_player.powered:
             # edge case: the group player is powered and being removed
-            # make sure to turn it off first (which will also unsync a syncgroup)
+            # make sure to turn it off first (which will also ungroup a syncgroup)
             await self.cmd_power(player_id, False)
 
-    async def cmd_sync(self, player_id: str, target_player: str) -> None:
-        """Handle SYNC command for given player.
+    async def cmd_group(self, player_id: str, target_player: str) -> None:
+        """Handle GROUP command for given player.
 
         Join/add the given player(id) to the given (master) player/sync group.
 
@@ -576,17 +572,17 @@ class PlayerGroupProvider(PlayerProvider):
                 f"Adjusting group members is not allowed for group {group_player.display_name}"
             )
         new_members = self._filter_members(group_type, [*group_player.group_childs, player_id])
-        group_player.group_childs = new_members
+        group_player.group_childs.set(new_members)
         if group_player.powered:
             # power on group player (which will also resync) if needed
             await self.cmd_power(target_player, True)
 
-    async def cmd_unsync_member(self, player_id: str, target_player: str) -> None:
-        """Handle UNSYNC command for given player.
+    async def cmd_ungroup_member(self, player_id: str, target_player: str) -> None:
+        """Handle UNGROUP command for given player.
 
         Remove the given player(id) from the given (master) player/sync group.
 
-            - player_id: player_id of the (child) player to unsync from the group.
+            - player_id: player_id of the (child) player to ungroup from the group.
             - target_player: player_id of the group player.
         """
         group_player = self.mass.players.get(target_player, raise_unavailable=True)
@@ -607,12 +603,12 @@ class PlayerGroupProvider(PlayerProvider):
         was_playing = child_player.state == PlayerState.PLAYING
         # forward command to the player provider
         if player_provider := self.mass.players.get_player_provider(child_player.player_id):
-            await player_provider.cmd_unsync(child_player.player_id)
+            await player_provider.cmd_ungroup(child_player.player_id)
             child_player.active_group = None
             child_player.active_source = None
-        group_player.group_childs = {x for x in group_player.group_childs if x != player_id}
+        group_player.group_childs.set({x for x in group_player.group_childs if x != player_id})
         if is_sync_leader and was_playing:
-            # unsyncing the sync leader will stop the group so we need to resume
+            # ungrouping the sync leader will stop the group so we need to resume
             self.mass.call_later(2, self.mass.players.cmd_play, group_player.player_id)
         elif group_player.powered:
             # power on group player (which will also resync) if needed
@@ -670,7 +666,7 @@ class PlayerGroupProvider(PlayerProvider):
             CONFIG_ENTRY_DYNAMIC_MEMBERS.key,
             CONFIG_ENTRY_DYNAMIC_MEMBERS.default_value,
         ):
-            player_features.add(PlayerFeature.SYNC)
+            player_features.add(PlayerFeature.SET_MEMBERS)
 
         player = Player(
             player_id=group_player_id,
@@ -681,7 +677,6 @@ class PlayerGroupProvider(PlayerProvider):
             powered=False,
             device_info=DeviceInfo(model=model_name, manufacturer=manufacturer),
             supported_features=tuple(player_features),
-            group_childs=set(members),
             active_source=group_player_id,
             needs_poll=True,
             poll_interval=30,
@@ -741,8 +736,8 @@ class PlayerGroupProvider(PlayerProvider):
         members_to_sync: list[str] = []
         for member in self.mass.players.iter_group_members(group_player, active_only=False):
             if member.synced_to and member.synced_to != sync_leader.player_id:
-                # unsync first
-                await self.mass.players.cmd_unsync(member.player_id)
+                # ungroup first
+                await self.mass.players.cmd_ungroup(member.player_id)
             if sync_leader.player_id == member.player_id:
                 # skip sync leader
                 continue
@@ -754,7 +749,7 @@ class PlayerGroupProvider(PlayerProvider):
                 continue
             members_to_sync.append(member.player_id)
         if members_to_sync:
-            await self.mass.players.cmd_sync_many(sync_leader.player_id, members_to_sync)
+            await self.mass.players.cmd_group_many(sync_leader.player_id, members_to_sync)
 
     async def _on_mass_player_added_event(self, event: MassEvent) -> None:
         """Handle player added event from player controller."""

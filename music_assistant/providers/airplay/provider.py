@@ -145,7 +145,7 @@ class AirplayProvider(PlayerProvider):
     _play_media_lock: asyncio.Lock = asyncio.Lock()
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         return (ProviderFeature.SYNC_PLAYERS,)
 
@@ -210,7 +210,7 @@ class AirplayProvider(PlayerProvider):
                     mass_player.device_info = DeviceInfo(
                         model=mass_player.device_info.model,
                         manufacturer=mass_player.device_info.manufacturer,
-                        address=str(cur_address),
+                        ip_address=str(cur_address),
                     )
                 if not mass_player.available:
                     self.logger.debug("Player back online: %s", display_name)
@@ -347,8 +347,8 @@ class AirplayProvider(PlayerProvider):
         await self.mass.cache.set(player_id, volume_level, base_key=CACHE_KEY_PREV_VOLUME)
 
     @lock
-    async def cmd_sync(self, player_id: str, target_player: str) -> None:
-        """Handle SYNC command for given player.
+    async def cmd_group(self, player_id: str, target_player: str) -> None:
+        """Handle GROUP command for given player.
 
         Join/add the given player(id) to the given (master) player/sync group.
 
@@ -398,10 +398,10 @@ class AirplayProvider(PlayerProvider):
             self.mass.players.update(parent_player.player_id, skip_forward=True)
 
     @lock
-    async def cmd_unsync(self, player_id: str) -> None:
-        """Handle UNSYNC command for given player.
+    async def cmd_ungroup(self, player_id: str) -> None:
+        """Handle UNGROUP command for given player.
 
-        Remove the given player from any syncgroups it currently is synced to.
+        Remove the given player from any (sync)groups it currently is grouped to.
 
             - player_id: player_id of the player to handle the command.
         """
@@ -514,14 +514,15 @@ class AirplayProvider(PlayerProvider):
             device_info=DeviceInfo(
                 model=model,
                 manufacturer=manufacturer,
-                address=address,
+                ip_address=address,
             ),
             supported_features=(
                 PlayerFeature.PAUSE,
-                PlayerFeature.SYNC,
+                PlayerFeature.SET_MEMBERS,
                 PlayerFeature.VOLUME_SET,
             ),
             volume_level=volume,
+            can_group_with={self.instance_id},
         )
         await self.mass.players.register_or_update(mass_player)
 

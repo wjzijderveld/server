@@ -110,6 +110,12 @@ class PlayerController(CoreController):
         self.manifest.icon = "speaker-multiple"
         self._poll_task: asyncio.Task | None = None
         self._player_throttlers: dict[str, Throttler] = {}
+        # TEMP 2024-11-20: register some aliases for renamed commands
+        # remove after a few releases
+        self.mass.register_api_command("players/cmd/sync", self.cmd_group)
+        self.mass.register_api_command("players/cmd/unsync", self.cmd_ungroup)
+        self.mass.register_api_command("players/cmd/sync_many", self.cmd_group_many)
+        self.mass.register_api_command("players/cmd/unsync_many", self.cmd_ungroup_many)
 
     async def setup(self, config: CoreConfig) -> None:
         """Async initialize of module."""
@@ -318,10 +324,10 @@ class PlayerController(CoreController):
         if player.powered == powered:
             return  # nothing to do
 
-        # unsync player at power off
+        # ungroup player at power off
         player_was_synced = player.synced_to is not None
         if not powered and (player.synced_to):
-            await self.cmd_unsync(player_id)
+            await self.cmd_ungroup(player_id)
 
         # always stop player at power off
         if (
@@ -615,84 +621,26 @@ class PlayerController(CoreController):
         async with self._player_throttlers[player_id]:
             await player_prov.enqueue_next_media(player_id=player_id, media=media)
 
-    @api_command("players/cmd/sync")
+    @api_command("players/cmd/group")
     @handle_player_command
-    async def cmd_sync(self, player_id: str, target_player: str) -> None:
-        """Handle SYNC command for given player.
+    async def cmd_group(self, player_id: str, target_player: str) -> None:
+        """Handle GROUP command for given player.
 
         Join/add the given player(id) to the given (leader) player/sync group.
-        If the player is already synced to another player, it will be unsynced there first.
         If the target player itself is already synced to another player, this may fail.
         If the player can not be synced with the given target player, this may fail.
 
             - player_id: player_id of the player to handle the command.
             - target_player: player_id of the syncgroup leader or group player.
         """
-        await self.cmd_sync_many(target_player, [player_id])
+        await self.cmd_group_many(target_player, [player_id])
 
-    @api_command("players/cmd/unsync")
-    @handle_player_command
-    async def cmd_unsync(self, player_id: str) -> None:
-        """Handle UNSYNC command for given player.
-
-        Remove the given player from any syncgroups it currently is synced to.
-        If the player is not currently synced to any other player,
-        this will silently be ignored.
-
-            - player_id: player_id of the player to handle the command.
-        """
-        if not (player := self.get(player_id)):
-            self.logger.warning("Player %s is not available", player_id)
-            return
-        if PlayerFeature.SYNC not in player.supported_features:
-            self.logger.warning("Player %s does not support (un)sync commands", player.name)
-            return
-        if not (player.synced_to or player.group_childs):
-            return  # nothing to do
-
-        if player.active_group and (
-            (group_provider := self.get_player_provider(player.active_group))
-            and group_provider.domain == "player_group"
-        ):
-            # the player is part of a permanent (sync)group and the user tries to unsync
-            # redirect the command to the group provider
-            group_provider = cast(PlayerGroupProvider, group_provider)
-            await group_provider.cmd_unsync_member(player_id, player.active_group)
-            return
-
-        # handle (edge)case where un unsync command is sent to a sync leader;
-        # we dissolve the entire syncgroup in this case.
-        # while maybe not strictly needed to do this for all player providers,
-        # we do this to keep the functionality consistent across all providers
-        if player.group_childs:
-            self.logger.warning(
-                "Detected unsync command to player %s which is a sync(group) leader, "
-                "all sync members will be unsynced!",
-                player.name,
-            )
-            async with TaskManager(self.mass) as tg:
-                for group_child_id in player.group_childs:
-                    if group_child_id == player_id:
-                        continue
-                    tg.create_task(self.cmd_unsync(group_child_id))
-            return
-
-        # (optimistically) reset active source player if it is unsynced
-        player.active_source = None
-
-        # forward command to the player provider
-        if player_provider := self.get_player_provider(player_id):
-            await player_provider.cmd_unsync(player_id)
-        # if the command succeeded we optimistically reset the sync state
-        # this is to prevent race conditions and to update the UI as fast as possible
-        player.synced_to = None
-
-    @api_command("players/cmd/sync_many")
-    async def cmd_sync_many(self, target_player: str, child_player_ids: list[str]) -> None:
-        """Create temporary sync group by joining given players to target player."""
+    @api_command("players/cmd/group_many")
+    async def cmd_group_many(self, target_player: str, child_player_ids: list[str]) -> None:
+        """Join given player(s) to target player."""
         parent_player: Player = self.get(target_player, True)
         prev_group_childs = parent_player.group_childs.copy()
-        if PlayerFeature.SYNC not in parent_player.supported_features:
+        if PlayerFeature.SET_MEMBERS not in parent_player.supported_features:
             msg = f"Player {parent_player.name} does not support sync commands"
             raise UnsupportedFeaturedException(msg)
 
@@ -700,7 +648,7 @@ class PlayerController(CoreController):
             # guard edge case: player already synced to another player
             raise PlayerCommandFailed(
                 f"Player {parent_player.name} is already synced to another player on its own, "
-                "you need to unsync it first before you can join other players to it.",
+                "you need to ungroup it first before you can join other players to it.",
             )
 
         # filter all player ids on compatibility and availability
@@ -711,10 +659,16 @@ class PlayerController(CoreController):
             if not (child_player := self.get(child_player_id)) or not child_player.available:
                 self.logger.warning("Player %s is not available", child_player_id)
                 continue
-            if PlayerFeature.SYNC not in child_player.supported_features:
-                # this should not happen, but just in case bad things happen, guard it
-                self.logger.warning("Player %s does not support sync commands", child_player.name)
-                continue
+            # check if player can be synced/grouped with the target player
+            if not (
+                child_player_id in parent_player.can_group_with
+                or child_player.provider in parent_player.can_group_with
+                or "*" in parent_player.can_group_with
+            ):
+                raise UnsupportedFeaturedException(
+                    f"Player {child_player.name} can not be grouped with {parent_player.name}"
+                )
+
             if child_player.synced_to and child_player.synced_to == target_player:
                 continue  # already synced to this target
 
@@ -722,15 +676,15 @@ class PlayerController(CoreController):
                 # guard edge case: childplayer is already a sync leader on its own
                 raise PlayerCommandFailed(
                     f"Player {child_player.name} is already synced with other players, "
-                    "you need to unsync it first before you can join it to another player.",
+                    "you need to ungroup it first before you can join it to another player.",
                 )
             if child_player.synced_to:
-                # player already synced to another player, unsync first
+                # player already synced to another player, ungroup first
                 self.logger.warning(
-                    "Player %s is already synced to another player, unsyncing first",
+                    "Player %s is already synced to another player, ungrouping first",
                     child_player.name,
                 )
-                await self.cmd_unsync(child_player.player_id)
+                await self.cmd_ungroup(child_player.player_id)
             # power on the player if needed
             if not child_player.powered:
                 await self.cmd_power(child_player.player_id, True, skip_update=True)
@@ -743,17 +697,74 @@ class PlayerController(CoreController):
         player_provider = self.get_player_provider(target_player)
         async with self._player_throttlers[target_player]:
             try:
-                await player_provider.cmd_sync_many(target_player, final_player_ids)
+                await player_provider.cmd_group_many(target_player, final_player_ids)
             except Exception:
                 # restore sync state if the command failed
-                parent_player.group_childs = prev_group_childs
+                parent_player.group_childs.set(prev_group_childs)
                 raise
 
-    @api_command("players/cmd/unsync_many")
-    async def cmd_unsync_many(self, player_ids: list[str]) -> None:
-        """Handle UNSYNC command for all the given players."""
+    @api_command("players/cmd/ungroup")
+    @handle_player_command
+    async def cmd_ungroup(self, player_id: str) -> None:
+        """Handle UNGROUP command for given player.
+
+        Remove the given player from any (sync)groups it currently is synced to.
+        If the player is not currently grouped to any other player,
+        this will silently be ignored.
+
+            - player_id: player_id of the player to handle the command.
+        """
+        if not (player := self.get(player_id)):
+            self.logger.warning("Player %s is not available", player_id)
+            return
+        if PlayerFeature.SET_MEMBERS not in player.supported_features:
+            self.logger.warning("Player %s does not support (un)group commands", player.name)
+            return
+        if not (player.synced_to or player.group_childs):
+            return  # nothing to do
+
+        if player.active_group and (
+            (group_provider := self.get_player_provider(player.active_group))
+            and group_provider.domain == "player_group"
+        ):
+            # the player is part of a permanent (sync)group and the user tries to ungroup
+            # redirect the command to the group provider
+            group_provider = cast(PlayerGroupProvider, group_provider)
+            await group_provider.cmd_ungroup_member(player_id, player.active_group)
+            return
+
+        # handle (edge)case where un ungroup command is sent to a sync leader;
+        # we dissolve the entire syncgroup in this case.
+        # while maybe not strictly needed to do this for all player providers,
+        # we do this to keep the functionality consistent across all providers
+        if player.group_childs:
+            self.logger.warning(
+                "Detected ungroup command to player %s which is a sync(group) leader, "
+                "all sync members will be ungrouped!",
+                player.name,
+            )
+            async with TaskManager(self.mass) as tg:
+                for group_child_id in player.group_childs:
+                    if group_child_id == player_id:
+                        continue
+                    tg.create_task(self.cmd_ungroup(group_child_id))
+            return
+
+        # (optimistically) reset active source player if it is ungrouped
+        player.active_source = None
+
+        # forward command to the player provider
+        if player_provider := self.get_player_provider(player_id):
+            await player_provider.cmd_ungroup(player_id)
+        # if the command succeeded we optimistically reset the sync state
+        # this is to prevent race conditions and to update the UI as fast as possible
+        player.synced_to = None
+
+    @api_command("players/cmd/ungroup_many")
+    async def cmd_ungroup_many(self, player_ids: list[str]) -> None:
+        """Handle UNGROUP command for all the given players."""
         for player_id in list(player_ids):
-            await self.cmd_unsync(player_id)
+            await self.cmd_ungroup(player_id)
 
     def set(self, player: Player) -> None:
         """Set/Update player details on the controller."""
@@ -851,8 +862,10 @@ class PlayerController(CoreController):
         player.active_source = self._get_active_source(player)
         player.volume_level = player.volume_level or 0  # guard for None volume
         # correct group_members if needed
-        if player.group_childs == {player.player_id}:
-            player.group_childs = set()
+        if player.group_childs == [player.player_id]:
+            player.group_childs.clear()
+        elif player.group_childs and player.player_id not in player.group_childs:
+            player.group_childs.set([player.player_id, *player.group_childs])
         # Auto correct player state if player is synced (or group child)
         # This is because some players/providers do not accurately update this info
         # for the sync child's.
@@ -1135,7 +1148,7 @@ class PlayerController(CoreController):
     def _handle_player_unavailable(self, player: Player) -> None:
         """Handle a player becoming unavailable."""
         if player.synced_to:
-            self.mass.create_task(self.cmd_unsync(player.player_id))
+            self.mass.create_task(self.cmd_ungroup(player.player_id))
             # also set this optimistically because the above command will most likely fail
             player.synced_to = None
             return
@@ -1146,7 +1159,7 @@ class PlayerController(CoreController):
                 self.mass.create_task(self.cmd_power(group_child_id, False, True))
                 # also set this optimistically because the above command will most likely fail
                 child_player.synced_to = None
-            player.group_childs = set()
+            player.group_childs.clear()
         if player.active_group and (group_player := self.get(player.active_group)):
             # remove player from group if its part of a group
             group_player = self.get(player.active_group)
@@ -1179,13 +1192,13 @@ class PlayerController(CoreController):
         queue = self.mass.player_queues.get(player.active_source)
         prev_queue_active = queue and queue.active
         prev_item_id = player.current_item_id
-        # unsync player if its currently synced
+        # ungroup player if its currently synced
         if prev_synced_to:
             self.logger.debug(
-                "Announcement to player %s - unsyncing player...",
+                "Announcement to player %s - ungrouping player...",
                 player.display_name,
             )
-            await self.cmd_unsync(player.player_id)
+            await self.cmd_ungroup(player.player_id)
         # stop player if its currently playing
         elif prev_state in (PlayerState.PLAYING, PlayerState.PAUSED):
             self.logger.debug(
@@ -1267,7 +1280,7 @@ class PlayerController(CoreController):
             await self.cmd_power(player.player_id, False)
             return
         elif prev_synced_to:
-            await self.cmd_sync(player.player_id, prev_synced_to)
+            await self.cmd_group(player.player_id, prev_synced_to)
         elif prev_queue_active and prev_state == PlayerState.PLAYING:
             await self.mass.player_queues.resume(queue.queue_id, True)
         elif prev_state == PlayerState.PLAYING:

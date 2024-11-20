@@ -125,7 +125,7 @@ class FullyKioskProvider(PlayerProvider):
                 device_info=DeviceInfo(
                     model=self._fully.deviceInfo["deviceModel"],
                     manufacturer=self._fully.deviceInfo["deviceManufacturer"],
-                    address=address,
+                    ip_address=address,
                 ),
                 supported_features=(PlayerFeature.VOLUME_SET,),
                 needs_poll=True,

@@ -372,9 +372,9 @@ class TidalProvider(MusicProvider):
             raise
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return (
+        return {
             ProviderFeature.LIBRARY_ARTISTS,
             ProviderFeature.LIBRARY_ALBUMS,
             ProviderFeature.LIBRARY_TRACKS,
@@ -390,7 +390,7 @@ class TidalProvider(MusicProvider):
             ProviderFeature.SIMILAR_TRACKS,
             ProviderFeature.BROWSE,
             ProviderFeature.PLAYLIST_TRACKS_EDIT,
-        )
+        }
 
     async def search(
         self,

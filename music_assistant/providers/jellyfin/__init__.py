@@ -153,9 +153,9 @@ class JellyfinProvider(MusicProvider):
             raise LoginFailed(f"Authentication failed: {err}") from err
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return a list of supported features."""
-        return (
+        return {
             ProviderFeature.LIBRARY_ARTISTS,
             ProviderFeature.LIBRARY_ALBUMS,
             ProviderFeature.LIBRARY_TRACKS,
@@ -164,7 +164,7 @@ class JellyfinProvider(MusicProvider):
             ProviderFeature.SEARCH,
             ProviderFeature.ARTIST_ALBUMS,
             ProviderFeature.SIMILAR_TRACKS,
-        )
+        }
 
     @property
     def is_streaming_provider(self) -> bool:
