@@ -52,9 +52,13 @@ from .const import (
     CONF_PASSWORD,
     CONF_READ_AHEAD_BUFFER,
     FALLBACK_VOLUME,
-    IGNORE_RAOP_SONOS_MODELS,
 )
-from .helpers import convert_airplay_volume, get_model_from_am, get_primary_ip_address
+from .helpers import (
+    convert_airplay_volume,
+    get_model_info,
+    get_primary_ip_address,
+    is_broken_raop_model,
+)
 from .player import AirPlayPlayer
 
 if TYPE_CHECKING:
@@ -113,6 +117,14 @@ PLAYER_CONFIG_ENTRIES = (
     create_sample_rates_config_entry(44100, 16, 44100, 16, True),
 )
 
+BROKEN_RAOP_WARN = ConfigEntry(
+    key="broken_raop",
+    type=ConfigEntryType.ALERT,
+    default_value=None,
+    required=False,
+    label="This player is known to have broken Airplay 1 (RAOP) support. "
+    "Playback may fail or simply be silent. There is no workaround for this issue at the moment.",
+)
 
 # TODO: Airplay provider
 # - Implement authentication for Apple TV
@@ -168,7 +180,13 @@ class AirplayProvider(PlayerProvider):
         self, name: str, state_change: ServiceStateChange, info: AsyncServiceInfo | None
     ) -> None:
         """Handle MDNS service state callback."""
-        raw_id, display_name = name.split(".")[0].split("@", 1)
+        if "@" in name:
+            raw_id, display_name = name.split(".")[0].split("@", 1)
+        elif "deviceid" in info.decoded_properties:
+            raw_id = info.decoded_properties["deviceid"].replace(":", "")
+            display_name = info.name.split(".")[0]
+        else:
+            return
         player_id = f"ap{raw_id.lower()}"
         # handle removed player
         if state_change == ServiceStateChange.Removed:
@@ -219,6 +237,9 @@ class AirplayProvider(PlayerProvider):
     async def get_player_config_entries(self, player_id: str) -> tuple[ConfigEntry, ...]:
         """Return all (provider/player specific) Config Entries for the given player (if any)."""
         base_entries = await super().get_player_config_entries(player_id)
+        if player := self.mass.players.get(player_id):
+            if is_broken_raop_model(player.device_info.manufacturer, player.device_info.model):
+                return (*base_entries, BROKEN_RAOP_WARN, *PLAYER_CONFIG_ENTRIES)
         return (*base_entries, *PLAYER_CONFIG_ENTRIES)
 
     async def cmd_stop(self, player_id: str) -> None:
@@ -450,9 +471,18 @@ class AirplayProvider(PlayerProvider):
         if address is None:
             return
         self.logger.debug("Discovered Airplay device %s on %s", display_name, address)
-        manufacturer, model = get_model_from_am(info.decoded_properties.get("am"))
 
-        default_enabled = not info.server.startswith("Sonos-")
+        # prefer airplay mdns info as it has more details
+        # fallback to raop info if airplay info is not available
+        airplay_info = AsyncServiceInfo(
+            "_airplay._tcp.local.", info.name.split("@")[-1].replace("_raop", "_airplay")
+        )
+        if await airplay_info.async_request(self.mass.aiozc.zeroconf, 3000):
+            manufacturer, model = get_model_info(airplay_info)
+        else:
+            manufacturer, model = get_model_info(info)
+
+        default_enabled = not is_broken_raop_model(manufacturer, model)
         if not self.mass.config.get_raw_player_config_value(player_id, "enabled", default_enabled):
             self.logger.debug("Ignoring %s in discovery as it is disabled.", display_name)
             return
@@ -465,15 +495,11 @@ class AirplayProvider(PlayerProvider):
                 "Ignoring %s in discovery because it is not yet supported.", display_name
             )
             return
-        if model in IGNORE_RAOP_SONOS_MODELS:
-            # for now completely ignore the sonos models that have broken RAOP support
-            # its very much unlikely that this will ever be fixed by Sonos
-            # revisit this once/if we have support for airplay 2.
-            self.logger.info(
-                "Ignoring %s in discovery as it is a known Sonos model with broken RAOP support.",
-                display_name,
-            )
-            return
+
+        # append airplay to the default display name for generic (non-apple) devices
+        # this makes it easier for users to distinguish between airplay and non-airplay devices
+        if manufacturer.lower() != "apple" and "airplay" not in display_name.lower():
+            display_name += " (Airplay)"
 
         self._players[player_id] = AirPlayPlayer(self, player_id, info, address)
         if not (volume := await self.mass.cache.get(player_id, base_key=CACHE_KEY_PREV_VOLUME)):

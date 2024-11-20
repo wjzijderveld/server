@@ -144,7 +144,7 @@ class SonosPlayerProvider(PlayerProvider):
             ConfigEntry(
                 key=CONF_AIRPLAY_MODE,
                 type=ConfigEntryType.BOOLEAN,
-                label="Enable Airplay mode (experimental)",
+                label="Enable Airplay mode",
                 description="Almost all newer Sonos speakers have Airplay support. "
                 "If you have the Airplay provider enabled in Music Assistant, "
                 "your Sonos speaker will also be detected as a Airplay speaker, meaning "
@@ -153,10 +153,8 @@ class SonosPlayerProvider(PlayerProvider):
                 "feature enabled, it will use the Airplay protocol instead by redirecting "
                 "the playback related commands to the linked Airplay player in Music Assistant, "
                 "allowing you to mix and match Sonos speakers with Airplay speakers. \n\n"
-                "NOTE: You need to have the Airplay provider enabled. "
-                "Also make sure that the Airplay version of this player is enabled. \n\n"
-                "TIP: When this feature is enabled, it make sense to set the underlying airplay "
-                "players to hide in the UI in the player settings to prevent duplicate players.",
+                "NOTE: You need to have the Airplay provider enabled as well as "
+                "the Airplay version of this player.",
                 required=False,
                 default_value=False,
                 depends_on="airplay_detected",
@@ -235,23 +233,24 @@ class SonosPlayerProvider(PlayerProvider):
             raise PlayerCommandFailed(msg)
         # for now always reset the active session
         sonos_player.client.player.group.active_session_id = None
-        if airplay := sonos_player.get_linked_airplay_player(True, True):
-            # linked airplay player is active, redirect the command
+        if airplay := sonos_player.get_linked_airplay_player(True):
+            # airplay mode is enabled, redirect the command
             self.logger.debug("Redirecting PLAY_MEDIA command to linked airplay player.")
             mass_player.active_source = airplay.active_source
             # Sonos has an annoying bug (for years already, and they dont seem to care),
             # where it looses its sync childs when airplay playback is (re)started.
             # Try to handle it here with this workaround.
-            group_childs = (
-                sonos_player.client.player.group_members
-                if len(sonos_player.client.player.group_members) > 1
-                else []
-            )
+            group_childs = [
+                x for x in sonos_player.client.player.group.player_ids if x != player_id
+            ]
             if group_childs:
                 await self.mass.players.cmd_unsync_many(group_childs)
             await self.mass.players.play_media(airplay.player_id, media)
             if group_childs:
-                self.mass.call_later(5, self.cmd_sync_many, player_id, group_childs)
+                # ensure master player is first in the list
+                group_childs = [sonos_player.player_id, *group_childs]
+                await asyncio.sleep(5)
+                await sonos_player.client.player.group.set_group_members(group_childs)
             return
 
         if media.queue_id and media.queue_id.startswith("ugp_"):
