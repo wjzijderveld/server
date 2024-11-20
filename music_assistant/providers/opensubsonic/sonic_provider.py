@@ -630,9 +630,16 @@ class OpenSonicProvider(MusicProvider):
 
     async def get_similar_tracks(self, prov_track_id: str, limit: int = 25) -> list[Track]:
         """Get tracks similar to selected track."""
-        songs: list[SonicSong] = await self._run_async(
-            self._conn.getSimilarSongs2, id=prov_track_id, count=limit
-        )
+        try:
+            songs: list[SonicSong] = await self._run_async(
+                self._conn.getSimilarSongs, iid=prov_track_id, count=limit
+            )
+        except DataNotFoundError as e:
+            # Subsonic returns an error here instead of an empty list, I don't think this
+            # should be an exception but there we are. Return an empty list because this
+            # exception means we didn't find anything similar.
+            self.logger.info(e)
+            return []
         return [self._parse_track(entry) for entry in songs]
 
     async def create_playlist(self, name: str) -> Playlist:
@@ -649,9 +656,9 @@ class OpenSonicProvider(MusicProvider):
             await self._run_async(
                 self._conn.updatePlaylist, lid=prov_playlist_id, songIdsToAdd=prov_track_ids
             )
-        except SonicError:
+        except SonicError as ex:
             msg = f"Failed to add songs to {prov_playlist_id}, check your permissions."
-            raise ProviderPermissionDenied(msg)
+            raise ProviderPermissionDenied(msg) from ex
 
     async def remove_playlist_tracks(
         self, prov_playlist_id: str, positions_to_remove: tuple[int, ...]
@@ -664,9 +671,9 @@ class OpenSonicProvider(MusicProvider):
                 lid=prov_playlist_id,
                 songIndexesToRemove=idx_to_remove,
             )
-        except SonicError:
+        except SonicError as ex:
             msg = f"Failed to remove songs from {prov_playlist_id}, check your permissions."
-            raise ProviderPermissionDenied(msg)
+            raise ProviderPermissionDenied(msg) from ex
 
     async def get_stream_details(self, item_id: str) -> StreamDetails:
         """Get the details needed to process a specified track."""
