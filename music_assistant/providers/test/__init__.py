@@ -82,9 +82,9 @@ class TestProvider(MusicProvider):
         return False
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return (ProviderFeature.LIBRARY_TRACKS,)
+        return {ProviderFeature.LIBRARY_TRACKS}
 
     async def get_track(self, prov_track_id: str) -> Track:
         """Get full track details by id."""

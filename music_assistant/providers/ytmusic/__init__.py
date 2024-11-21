@@ -100,7 +100,7 @@ YT_PERSONAL_PLAYLISTS = (
 )
 YTM_PREMIUM_CHECK_TRACK_ID = "dQw4w9WgXcQ"
 
-SUPPORTED_FEATURES = (
+SUPPORTED_FEATURES = {
     ProviderFeature.LIBRARY_ARTISTS,
     ProviderFeature.LIBRARY_ALBUMS,
     ProviderFeature.LIBRARY_TRACKS,
@@ -110,7 +110,7 @@ SUPPORTED_FEATURES = (
     ProviderFeature.ARTIST_ALBUMS,
     ProviderFeature.ARTIST_TOPTRACKS,
     ProviderFeature.SIMILAR_TRACKS,
-)
+}
 
 
 # TODO: fix disabled tests
@@ -185,7 +185,7 @@ class YoutubeMusicProvider(MusicProvider):
             raise LoginFailed("User does not have Youtube Music Premium")
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         return SUPPORTED_FEATURES
 

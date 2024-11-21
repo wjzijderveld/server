@@ -112,12 +112,12 @@ class SiriusXMProvider(MusicProvider):
     _current_stream_details: StreamDetails | None = None
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return (
+        return {
             ProviderFeature.BROWSE,
             ProviderFeature.LIBRARY_RADIOS,
-        )
+        }
 
     async def handle_async_init(self) -> None:
         """Handle async initialization of the provider."""

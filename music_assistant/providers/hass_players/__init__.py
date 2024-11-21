@@ -334,8 +334,8 @@ class HomeAssistantPlayers(PlayerProvider):
             target={"entity_id": player_id},
         )
 
-    async def cmd_sync(self, player_id: str, target_player: str) -> None:
-        """Handle SYNC command for given player.
+    async def cmd_group(self, player_id: str, target_player: str) -> None:
+        """Handle GROUP command for given player.
 
         Join/add the given player(id) to the given (master) player/sync group.
 
@@ -350,10 +350,10 @@ class HomeAssistantPlayers(PlayerProvider):
             target={"entity_id": target_player},
         )
 
-    async def cmd_unsync(self, player_id: str) -> None:
-        """Handle UNSYNC command for given player.
+    async def cmd_ungroup(self, player_id: str) -> None:
+        """Handle UNGROUP command for given player.
 
-        Remove the given player from any syncgroups it currently is synced to.
+        Remove the given player from any (sync)groups it currently is grouped to.
 
             - player_id: player_id of the player to handle the command.
         """
@@ -377,20 +377,20 @@ class HomeAssistantPlayers(PlayerProvider):
         hass_supported_features = MediaPlayerEntityFeature(
             state["attributes"]["supported_features"]
         )
-        supported_features: list[PlayerFeature] = []
+        supported_features: set[PlayerFeature] = set()
         if MediaPlayerEntityFeature.PAUSE in hass_supported_features:
-            supported_features.append(PlayerFeature.PAUSE)
+            supported_features.add(PlayerFeature.PAUSE)
         if MediaPlayerEntityFeature.VOLUME_SET in hass_supported_features:
-            supported_features.append(PlayerFeature.VOLUME_SET)
+            supported_features.add(PlayerFeature.VOLUME_SET)
         if MediaPlayerEntityFeature.VOLUME_MUTE in hass_supported_features:
-            supported_features.append(PlayerFeature.VOLUME_MUTE)
+            supported_features.add(PlayerFeature.VOLUME_MUTE)
         if MediaPlayerEntityFeature.MEDIA_ENQUEUE in hass_supported_features:
-            supported_features.append(PlayerFeature.ENQUEUE)
+            supported_features.add(PlayerFeature.ENQUEUE)
         if (
             MediaPlayerEntityFeature.TURN_ON in hass_supported_features
             and MediaPlayerEntityFeature.TURN_OFF in hass_supported_features
         ):
-            supported_features.append(PlayerFeature.POWER)
+            supported_features.add(PlayerFeature.POWER)
         player = Player(
             player_id=state["entity_id"],
             provider=self.instance_id,
@@ -404,7 +404,7 @@ class HomeAssistantPlayers(PlayerProvider):
                     hass_device["manufacturer"] if hass_device else "Unknown Manufacturer"
                 ),
             ),
-            supported_features=tuple(supported_features),
+            supported_features=supported_features,
             state=StateMap.get(state["state"], PlayerState.IDLE),
         )
         self._update_player_attributes(player, state["attributes"])
@@ -460,13 +460,13 @@ class HomeAssistantPlayers(PlayerProvider):
                 player.current_item_id = value
             if key == "group_members":
                 if value and value[0] == player.player_id:
-                    player.group_childs = value
+                    player.group_childs.set(value)
                     player.synced_to = None
                 elif value and value[0] != player.player_id:
-                    player.group_childs = set()
+                    player.group_childs.clear()
                     player.synced_to = value[0]
                 else:
-                    player.group_childs = set()
+                    player.group_childs.clear()
                     player.synced_to = None
 
     async def _late_add_player(self, entity_id: str) -> None:

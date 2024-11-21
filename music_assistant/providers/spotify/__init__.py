@@ -91,7 +91,7 @@ SCOPE = [
 CALLBACK_REDIRECT_URL = "https://music-assistant.io/callback"
 
 LIKED_SONGS_FAKE_PLAYLIST_ID_PREFIX = "liked_songs"
-SUPPORTED_FEATURES = (
+SUPPORTED_FEATURES = {
     ProviderFeature.LIBRARY_ARTISTS,
     ProviderFeature.LIBRARY_ALBUMS,
     ProviderFeature.LIBRARY_TRACKS,
@@ -106,7 +106,7 @@ SUPPORTED_FEATURES = (
     ProviderFeature.ARTIST_ALBUMS,
     ProviderFeature.ARTIST_TOPTRACKS,
     ProviderFeature.SIMILAR_TRACKS,
-)
+}
 
 
 async def setup(
@@ -257,9 +257,9 @@ class SpotifyProvider(MusicProvider):
         await self.login()
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return (
+        return {
             ProviderFeature.LIBRARY_ARTISTS,
             ProviderFeature.LIBRARY_ALBUMS,
             ProviderFeature.LIBRARY_TRACKS,
@@ -275,7 +275,7 @@ class SpotifyProvider(MusicProvider):
             ProviderFeature.ARTIST_ALBUMS,
             ProviderFeature.ARTIST_TOPTRACKS,
             ProviderFeature.SIMILAR_TRACKS,
-        )
+        }
 
     @property
     def name(self) -> str:

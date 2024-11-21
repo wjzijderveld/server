@@ -34,7 +34,7 @@ from music_assistant.models.music_provider import MusicProvider
 CONF_CLIENT_ID = "client_id"
 CONF_AUTHORIZATION = "authorization"
 
-SUPPORTED_FEATURES = (
+SUPPORTED_FEATURES = {
     ProviderFeature.LIBRARY_ARTISTS,
     ProviderFeature.LIBRARY_TRACKS,
     ProviderFeature.LIBRARY_PLAYLISTS,
@@ -42,7 +42,7 @@ SUPPORTED_FEATURES = (
     ProviderFeature.SEARCH,
     ProviderFeature.ARTIST_TOPTRACKS,
     ProviderFeature.SIMILAR_TRACKS,
-)
+}
 
 
 if TYPE_CHECKING:
@@ -117,7 +117,7 @@ class SoundcloudMusicProvider(MusicProvider):
         self._user_id = self._me["id"]
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         return SUPPORTED_FEATURES
 

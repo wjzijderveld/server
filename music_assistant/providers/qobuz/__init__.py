@@ -61,7 +61,7 @@ if TYPE_CHECKING:
     from music_assistant.models import ProviderInstanceType
 
 
-SUPPORTED_FEATURES = (
+SUPPORTED_FEATURES = {
     ProviderFeature.LIBRARY_ARTISTS,
     ProviderFeature.LIBRARY_ALBUMS,
     ProviderFeature.LIBRARY_TRACKS,
@@ -75,7 +75,7 @@ SUPPORTED_FEATURES = (
     ProviderFeature.SEARCH,
     ProviderFeature.ARTIST_ALBUMS,
     ProviderFeature.ARTIST_TOPTRACKS,
-)
+}
 
 VARIOUS_ARTISTS_ID = "145383"
 
@@ -137,7 +137,7 @@ class QobuzProvider(MusicProvider):
             raise LoginFailed(msg)
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         return SUPPORTED_FEATURES
 

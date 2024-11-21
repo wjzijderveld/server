@@ -112,9 +112,9 @@ class OpenSonicProvider(MusicProvider):
             self.logger.info("Server does not support transcodeOffset, seeking in player provider")
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return a list of supported features."""
-        return (
+        return {
             ProviderFeature.LIBRARY_ARTISTS,
             ProviderFeature.LIBRARY_ALBUMS,
             ProviderFeature.LIBRARY_TRACKS,
@@ -127,7 +127,7 @@ class OpenSonicProvider(MusicProvider):
             ProviderFeature.SIMILAR_TRACKS,
             ProviderFeature.PLAYLIST_TRACKS_EDIT,
             ProviderFeature.PLAYLIST_CREATE,
-        )
+        }
 
     @property
     def is_streaming_provider(self) -> bool:

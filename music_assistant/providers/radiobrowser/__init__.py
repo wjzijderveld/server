@@ -33,7 +33,7 @@ from radios import FilterBy, Order, RadioBrowser, RadioBrowserError, Station
 from music_assistant.controllers.cache import use_cache
 from music_assistant.models.music_provider import MusicProvider
 
-SUPPORTED_FEATURES = (
+SUPPORTED_FEATURES = {
     ProviderFeature.SEARCH,
     ProviderFeature.BROWSE,
     # RadioBrowser doesn't support a library feature at all
@@ -41,7 +41,7 @@ SUPPORTED_FEATURES = (
     # have that included in backups so we store it in the config.
     ProviderFeature.LIBRARY_RADIOS,
     ProviderFeature.LIBRARY_RADIOS_EDIT,
-)
+}
 
 if TYPE_CHECKING:
     from music_assistant_models.config_entries import ConfigValueType, ProviderConfig
@@ -93,7 +93,7 @@ class RadioBrowserProvider(MusicProvider):
     """Provider implementation for RadioBrowser."""
 
     @property
-    def supported_features(self) -> tuple[ProviderFeature, ...]:
+    def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
         return SUPPORTED_FEATURES
 

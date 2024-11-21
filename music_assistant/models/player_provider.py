@@ -169,8 +169,8 @@ class PlayerProvider(Provider):
         # will only be called for players with 'next_previous' feature set.
         raise NotImplementedError
 
-    async def cmd_sync(self, player_id: str, target_player: str) -> None:
-        """Handle SYNC command for given player.
+    async def cmd_group(self, player_id: str, target_player: str) -> None:
+        """Handle GROUP command for given player.
 
         Join/add the given player(id) to the given (master) player/sync group.
 
@@ -180,21 +180,21 @@ class PlayerProvider(Provider):
         # will only be called for players with SYNC feature set.
         raise NotImplementedError
 
-    async def cmd_unsync(self, player_id: str) -> None:
-        """Handle UNSYNC command for given player.
+    async def cmd_ungroup(self, player_id: str) -> None:
+        """Handle UNGROUP command for given player.
 
-        Remove the given player from any syncgroups it currently is synced to.
+        Remove the given player from any (sync)groups it currently is grouped to.
 
             - player_id: player_id of the player to handle the command.
         """
         # will only be called for players with SYNC feature set.
         raise NotImplementedError
 
-    async def cmd_sync_many(self, target_player: str, child_player_ids: list[str]) -> None:
+    async def cmd_group_many(self, target_player: str, child_player_ids: list[str]) -> None:
         """Create temporary sync group by joining given players to target player."""
         for child_id in child_player_ids:
-            # default implementation, simply call the cmd_sync for all child players
-            await self.cmd_sync(child_id, target_player)
+            # default implementation, simply call the cmd_group for all child players
+            await self.cmd_group(child_id, target_player)
 
     async def poll_player(self, player_id: str) -> None:
         """Poll player for state updates.
