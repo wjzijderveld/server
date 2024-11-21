@@ -19,12 +19,16 @@ from music_assistant_models.errors import SetupFailedError
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
 
 from music_assistant.constants import (
+    CONF_ENFORCE_MP3,
+    CONF_ENTRY_CROSSFADE,
     CONF_ENTRY_CROSSFADE_DURATION,
-    CONF_ENTRY_CROSSFADE_FLOW_MODE_REQUIRED,
     CONF_ENTRY_ENABLE_ICY_METADATA,
     CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED,
     CONF_ENTRY_FLOW_MODE_ENFORCED,
     CONF_ENTRY_HTTP_PROFILE,
+    CONF_ENTRY_HTTP_PROFILE_FORCED_2,
+    HIDDEN_ANNOUNCE_VOLUME_CONFIG_ENTRIES,
+    create_sample_rates_config_entry,
 )
 from music_assistant.helpers.datetime import from_iso_string
 from music_assistant.helpers.tags import parse_tags
@@ -86,16 +90,24 @@ class MediaPlayerEntityFeature(IntFlag):
     MEDIA_ENQUEUE = 2097152
 
 
-CONF_ENFORCE_MP3 = "enforce_mp3"
-
-
-PLAYER_CONFIG_ENTRIES = (
-    CONF_ENTRY_CROSSFADE_FLOW_MODE_REQUIRED,
+DEFAULT_PLAYER_CONFIG_ENTRIES = (
+    CONF_ENTRY_CROSSFADE,
     CONF_ENTRY_CROSSFADE_DURATION,
     CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED,
     CONF_ENTRY_HTTP_PROFILE,
     CONF_ENTRY_ENABLE_ICY_METADATA,
     CONF_ENTRY_FLOW_MODE_ENFORCED,
+)
+VOICE_PE_MODELS = ("Home Assistant Voice PE",)
+VOICE_PE_MODELS_PLAYER_CONFIG_ENTRIES = (
+    # New ESPHome mediaplayer (used in Voice PE) uses FLAC 48khz/16 bits
+    CONF_ENTRY_CROSSFADE,
+    CONF_ENTRY_CROSSFADE_DURATION,
+    CONF_ENTRY_FLOW_MODE_ENFORCED,
+    CONF_ENTRY_HTTP_PROFILE_FORCED_2,
+    create_sample_rates_config_entry(48000, 16, hidden=True),
+    # although the Voice PE supports announcements, it does not support volume for announcements
+    *HIDDEN_ANNOUNCE_VOLUME_CONFIG_ENTRIES,
 )
 
 
@@ -196,7 +208,11 @@ class HomeAssistantPlayers(PlayerProvider):
     ) -> tuple[ConfigEntry, ...]:
         """Return all (provider/player specific) Config Entries for the given player (if any)."""
         base_entries = await super().get_player_config_entries(player_id)
-        return base_entries + PLAYER_CONFIG_ENTRIES
+        player = self.mass.players.get(player_id)
+        if player and player.device_info.model in VOICE_PE_MODELS:
+            # optimized config for Voice PE
+            return base_entries + VOICE_PE_MODELS_PLAYER_CONFIG_ENTRIES
+        return base_entries + DEFAULT_PLAYER_CONFIG_ENTRIES
 
     async def cmd_stop(self, player_id: str) -> None:
         """Send STOP command to given player.
@@ -247,16 +263,20 @@ class HomeAssistantPlayers(PlayerProvider):
                 "media_content_type": "music",
                 "enqueue": "replace",
                 "extra": {
+                    # passing metadata to the player
+                    # so far only supported by google cast, but maybe others can follow
                     "metadata": {
                         "title": media.title,
                         "artist": media.artist,
                         "metadataType": 3,
                         "album": media.album,
                         "albumName": media.album,
-                        "duration": media.duration,
                         "images": [{"url": media.image_url}] if media.image_url else None,
                         "imageUrl": media.image_url,
-                    }
+                    },
+                    # tell esphome mediaproxy to bypass the proxy,
+                    # as MA already delivers an optimized stream
+                    "bypass_proxy": True,
                 },
             },
             target={"entity_id": player_id},
@@ -404,6 +424,10 @@ class HomeAssistantPlayers(PlayerProvider):
             powered=state["state"] not in ("unavailable", "unknown", "standby", "off"),
             device_info=DeviceInfo.from_dict(dev_info),
             state=StateMap.get(state["state"], PlayerState.IDLE),
+            extra_data={
+                "hass_domain": hass_domain,
+                "hass_device_id": hass_device["id"] if hass_device else None,
+            },
         )
         # work out supported features
         hass_supported_features = MediaPlayerEntityFeature(
