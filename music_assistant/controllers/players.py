@@ -49,7 +49,6 @@ from music_assistant.helpers.throttle_retry import Throttler
 from music_assistant.helpers.util import TaskManager, get_changed_values
 from music_assistant.models.core_controller import CoreController
 from music_assistant.models.player_provider import PlayerProvider
-from music_assistant.providers.player_group import PlayerGroupProvider
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Coroutine, Iterator
@@ -326,7 +325,9 @@ class PlayerController(CoreController):
 
         # ungroup player at power off
         player_was_synced = player.synced_to is not None
-        if not powered and (player.synced_to):
+        if not powered:
+            # this will handle both synced players and group players
+            # NOTE: ungroup will be ignored if the player is not grouped or synced
             await self.cmd_ungroup(player_id)
 
         # always stop player at power off
@@ -352,7 +353,9 @@ class PlayerController(CoreController):
         else:
             # allow the stop command to process and prevent race conditions
             await asyncio.sleep(0.2)
-            await self.mass.cache.set(player_id, powered, base_key="player_power")
+
+        # store last power state in cache
+        await self.mass.cache.set(player_id, powered, base_key="player_power")
 
         # always optimistically set the power state to update the UI
         # as fast as possible and prevent race conditions
@@ -641,7 +644,7 @@ class PlayerController(CoreController):
         parent_player: Player = self.get(target_player, True)
         prev_group_childs = parent_player.group_childs.copy()
         if PlayerFeature.SET_MEMBERS not in parent_player.supported_features:
-            msg = f"Player {parent_player.name} does not support sync commands"
+            msg = f"Player {parent_player.name} does not support group commands"
             raise UnsupportedFeaturedException(msg)
 
         if parent_player.synced_to:
@@ -663,7 +666,6 @@ class PlayerController(CoreController):
             if not (
                 child_player_id in parent_player.can_group_with
                 or child_player.provider in parent_player.can_group_with
-                or "*" in parent_player.can_group_with
             ):
                 raise UnsupportedFeaturedException(
                     f"Player {child_player.name} can not be grouped with {parent_player.name}"
@@ -717,20 +719,23 @@ class PlayerController(CoreController):
         if not (player := self.get(player_id)):
             self.logger.warning("Player %s is not available", player_id)
             return
-        if PlayerFeature.SET_MEMBERS not in player.supported_features:
-            self.logger.warning("Player %s does not support (un)group commands", player.name)
+
+        if (
+            player.active_group
+            and (group_player := self.get(player.active_group))
+            and PlayerFeature.SET_MEMBERS in group_player.supported_features
+        ):
+            # the player is part of a (permanent) groupplayer and the user tries to ungroup
+            # redirect the command to the group provider
+            group_provider = self.mass.get_provider(group_player.provider)
+            await group_provider.cmd_ungroup_member(player_id, group_player.player_id)
             return
+
         if not (player.synced_to or player.group_childs):
             return  # nothing to do
 
-        if player.active_group and (
-            (group_provider := self.get_player_provider(player.active_group))
-            and group_provider.domain == "player_group"
-        ):
-            # the player is part of a permanent (sync)group and the user tries to ungroup
-            # redirect the command to the group provider
-            group_provider = cast(PlayerGroupProvider, group_provider)
-            await group_provider.cmd_ungroup_member(player_id, player.active_group)
+        if PlayerFeature.SET_MEMBERS not in player.supported_features:
+            self.logger.warning("Player %s does not support (un)group commands", player.name)
             return
 
         # handle (edge)case where un ungroup command is sent to a sync leader;

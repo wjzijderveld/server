@@ -397,7 +397,7 @@ class BluesoundPlayerProvider(PlayerProvider):
     # TODO fix sync & ungroup
 
     async def cmd_group(self, player_id: str, target_player: str) -> None:
-        """Handle SYNC command for BluOS player."""
+        """Handle GROUP command for BluOS player."""
 
     async def cmd_ungroup(self, player_id: str) -> None:
         """Handle UNGROUP command for BluOS player."""

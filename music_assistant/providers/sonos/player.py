@@ -200,7 +200,7 @@ class SonosPlayer:
         if self.client.player.is_passive:
             self.logger.debug("Ignore STOP command: Player is synced to another player.")
             return
-        if (airplay := self.get_linked_airplay_player(True)) and airplay.state != PlayerState.IDLE:
+        if airplay := self.get_linked_airplay_player(True):
             # linked airplay player is active, redirect the command
             self.logger.debug("Redirecting PLAY command to linked airplay player.")
             if player_provider := self.mass.get_provider(airplay.provider):
@@ -247,6 +247,7 @@ class SonosPlayer:
         self.mass_player.volume_muted = self.client.player.volume_muted
 
         group_parent = None
+        airplay_player = self.get_linked_airplay_player(False)
         if self.client.player.is_coordinator:
             # player is group coordinator
             active_group = self.client.player.group
@@ -254,6 +255,20 @@ class SonosPlayer:
                 self.mass_player.group_childs.set(self.client.player.group_members)
             else:
                 self.mass_player.group_childs.clear()
+            # append airplay child's to group childs
+            if self.airplay_mode_enabled and airplay_player:
+                airplay_childs = [
+                    x for x in airplay_player.group_childs if x != airplay_player.player_id
+                ]
+                self.mass_player.group_childs.extend(airplay_childs)
+                airplay_prov = self.mass.get_provider(airplay_player.provider)
+                self.mass_player.can_group_with.update(
+                    x.player_id
+                    for x in airplay_prov.players
+                    if x.player_id != airplay_player.player_id
+                )
+            else:
+                self.mass_player.can_group_with = {self.prov.instance_id}
             self.mass_player.synced_to = None
         else:
             # player is group child (synced to another player)
@@ -278,7 +293,6 @@ class SonosPlayer:
             self.mass_player.active_source = SOURCE_LINE_IN
         elif container_type == ContainerType.AIRPLAY:
             # check if the MA airplay player is active
-            airplay_player = self.get_linked_airplay_player(False)
             if airplay_player and airplay_player.state in (
                 PlayerState.PLAYING,
                 PlayerState.PAUSED,

@@ -177,7 +177,7 @@ class PlayerProvider(Provider):
             - player_id: player_id of the player to handle the command.
             - target_player: player_id of the sync leader.
         """
-        # will only be called for players with SYNC feature set.
+        # will only be called for players with SET_MEMBERS feature set.
         raise NotImplementedError
 
     async def cmd_ungroup(self, player_id: str) -> None:
@@ -187,7 +187,7 @@ class PlayerProvider(Provider):
 
             - player_id: player_id of the player to handle the command.
         """
-        # will only be called for players with SYNC feature set.
+        # will only be called for players with SET_MEMBERS feature set.
         raise NotImplementedError
 
     async def cmd_group_many(self, target_player: str, child_player_ids: list[str]) -> None:
@@ -195,6 +195,17 @@ class PlayerProvider(Provider):
         for child_id in child_player_ids:
             # default implementation, simply call the cmd_group for all child players
             await self.cmd_group(child_id, target_player)
+
+    async def cmd_ungroup_member(self, player_id: str, target_player: str) -> None:
+        """Handle UNGROUP command for given player.
+
+        Remove the given player(id) from the given (master) player/sync group.
+
+            - player_id: player_id of the (child) player to ungroup from the group.
+            - target_player: player_id of the group player.
+        """
+        # can only be called for groupplayers with SET_MEMBERS feature set.
+        raise NotImplementedError
 
     async def poll_player(self, player_id: str) -> None:
         """Poll player for state updates.

@@ -201,9 +201,17 @@ class SonosPlayerProvider(PlayerProvider):
     async def cmd_group_many(self, target_player: str, child_player_ids: list[str]) -> None:
         """Create temporary sync group by joining given players to target player."""
         sonos_player = self.sonos_players[target_player]
-        await sonos_player.client.player.group.modify_group_members(
-            player_ids_to_add=child_player_ids, player_ids_to_remove=[]
-        )
+        if airplay_player := sonos_player.get_linked_airplay_player(False):
+            # if airplay mode is enabled, we could possibly receive child player id's that are
+            # not Sonos players, but Airplay players. We redirect those.
+            airplay_child_ids = [x for x in child_player_ids if x.startswith("ap")]
+            child_player_ids = [x for x in child_player_ids if x not in airplay_child_ids]
+            if airplay_child_ids:
+                await self.mass.players.cmd_group_many(airplay_player.player_id, airplay_child_ids)
+        if child_player_ids:
+            await sonos_player.client.player.group.modify_group_members(
+                player_ids_to_add=child_player_ids, player_ids_to_remove=[]
+            )
 
     async def cmd_ungroup(self, player_id: str) -> None:
         """Handle UNGROUP command for given player.

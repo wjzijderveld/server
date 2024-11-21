@@ -142,7 +142,6 @@ class AirplayProvider(PlayerProvider):
     _players: dict[str, AirPlayPlayer]
     _dacp_server: asyncio.Server = None
     _dacp_info: AsyncServiceInfo = None
-    _play_media_lock: asyncio.Lock = asyncio.Lock()
 
     @property
     def supported_features(self) -> set[ProviderFeature]:
@@ -279,56 +278,55 @@ class AirplayProvider(PlayerProvider):
         media: PlayerMedia,
     ) -> None:
         """Handle PLAY MEDIA on given player."""
-        async with self._play_media_lock:
-            player = self.mass.players.get(player_id)
-            # set the active source for the player to the media queue
-            # this accounts for syncgroups and linked players (e.g. sonos)
-            player.active_source = media.queue_id
-            if player.synced_to:
-                # should not happen, but just in case
-                raise RuntimeError("Player is synced")
-            # always stop existing stream first
-            async with TaskManager(self.mass) as tg:
-                for airplay_player in self._get_sync_clients(player_id):
-                    tg.create_task(airplay_player.cmd_stop(update_state=False))
-            # select audio source
-            if media.media_type == MediaType.ANNOUNCEMENT:
-                # special case: stream announcement
-                input_format = AIRPLAY_PCM_FORMAT
-                audio_source = self.mass.streams.get_announcement_stream(
-                    media.custom_data["url"],
-                    output_format=AIRPLAY_PCM_FORMAT,
-                    use_pre_announce=media.custom_data["use_pre_announce"],
-                )
-            elif media.queue_id.startswith("ugp_"):
-                # special case: UGP stream
-                ugp_provider: PlayerGroupProvider = self.mass.get_provider("player_group")
-                ugp_stream = ugp_provider.ugp_streams[media.queue_id]
-                input_format = ugp_stream.output_format
-                audio_source = ugp_stream.subscribe()
-            elif media.queue_id and media.queue_item_id:
-                # regular queue (flow) stream request
-                input_format = AIRPLAY_FLOW_PCM_FORMAT
-                audio_source = self.mass.streams.get_flow_stream(
-                    queue=self.mass.player_queues.get(media.queue_id),
-                    start_queue_item=self.mass.player_queues.get_item(
-                        media.queue_id, media.queue_item_id
-                    ),
-                    pcm_format=input_format,
-                )
-            else:
-                # assume url or some other direct path
-                # NOTE: this will fail if its an uri not playable by ffmpeg
-                input_format = AIRPLAY_PCM_FORMAT
-                audio_source = get_ffmpeg_stream(
-                    audio_input=media.uri,
-                    input_format=AudioFormat(ContentType.try_parse(media.uri)),
-                    output_format=AIRPLAY_PCM_FORMAT,
-                )
-            # setup RaopStreamSession for player (and its sync childs if any)
-            sync_clients = self._get_sync_clients(player_id)
-            raop_stream_session = RaopStreamSession(self, sync_clients, input_format, audio_source)
-            await raop_stream_session.start()
+        player = self.mass.players.get(player_id)
+        # set the active source for the player to the media queue
+        # this accounts for syncgroups and linked players (e.g. sonos)
+        player.active_source = media.queue_id
+        if player.synced_to:
+            # should not happen, but just in case
+            raise RuntimeError("Player is synced")
+        # always stop existing stream first
+        async with TaskManager(self.mass) as tg:
+            for airplay_player in self._get_sync_clients(player_id):
+                tg.create_task(airplay_player.cmd_stop(update_state=False))
+        # select audio source
+        if media.media_type == MediaType.ANNOUNCEMENT:
+            # special case: stream announcement
+            input_format = AIRPLAY_PCM_FORMAT
+            audio_source = self.mass.streams.get_announcement_stream(
+                media.custom_data["url"],
+                output_format=AIRPLAY_PCM_FORMAT,
+                use_pre_announce=media.custom_data["use_pre_announce"],
+            )
+        elif media.queue_id.startswith("ugp_"):
+            # special case: UGP stream
+            ugp_provider: PlayerGroupProvider = self.mass.get_provider("player_group")
+            ugp_stream = ugp_provider.ugp_streams[media.queue_id]
+            input_format = ugp_stream.output_format
+            audio_source = ugp_stream.subscribe()
+        elif media.queue_id and media.queue_item_id:
+            # regular queue (flow) stream request
+            input_format = AIRPLAY_FLOW_PCM_FORMAT
+            audio_source = self.mass.streams.get_flow_stream(
+                queue=self.mass.player_queues.get(media.queue_id),
+                start_queue_item=self.mass.player_queues.get_item(
+                    media.queue_id, media.queue_item_id
+                ),
+                pcm_format=input_format,
+            )
+        else:
+            # assume url or some other direct path
+            # NOTE: this will fail if its an uri not playable by ffmpeg
+            input_format = AIRPLAY_PCM_FORMAT
+            audio_source = get_ffmpeg_stream(
+                audio_input=media.uri,
+                input_format=AudioFormat(ContentType.try_parse(media.uri)),
+                output_format=AIRPLAY_PCM_FORMAT,
+            )
+        # setup RaopStreamSession for player (and its sync childs if any)
+        sync_clients = self._get_sync_clients(player_id)
+        raop_stream_session = RaopStreamSession(self, sync_clients, input_format, audio_source)
+        await raop_stream_session.start()
 
     async def cmd_volume_set(self, player_id: str, volume_level: int) -> None:
         """Send VOLUME_SET command to given player.
@@ -482,8 +480,7 @@ class AirplayProvider(PlayerProvider):
         else:
             manufacturer, model = get_model_info(info)
 
-        default_enabled = not is_broken_raop_model(manufacturer, model)
-        if not self.mass.config.get_raw_player_config_value(player_id, "enabled", default_enabled):
+        if not self.mass.config.get_raw_player_config_value(player_id, "enabled", True):
             self.logger.debug("Ignoring %s in discovery as it is disabled.", display_name)
             return
 
@@ -523,6 +520,7 @@ class AirplayProvider(PlayerProvider):
             },
             volume_level=volume,
             can_group_with={self.instance_id},
+            enabled_by_default=not is_broken_raop_model(manufacturer, model),
         )
         await self.mass.players.register_or_update(mass_player)
 
