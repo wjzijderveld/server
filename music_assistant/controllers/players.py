@@ -46,7 +46,7 @@ from music_assistant.constants import (
 from music_assistant.helpers.api import api_command
 from music_assistant.helpers.tags import parse_tags
 from music_assistant.helpers.throttle_retry import Throttler
-from music_assistant.helpers.util import TaskManager, get_changed_values
+from music_assistant.helpers.util import TaskManager, get_changed_values, lock
 from music_assistant.models.core_controller import CoreController
 from music_assistant.models.player_provider import PlayerProvider
 
@@ -214,9 +214,6 @@ class PlayerController(CoreController):
         - player_id: player_id of the player to handle the command.
         """
         player = self._get_player_with_redirect(player_id)
-        if player.announcement_in_progress:
-            self.logger.warning("Ignore command: An announcement is in progress")
-            return
         if PlayerFeature.PAUSE not in player.supported_features:
             # if player does not support pause, we need to send stop
             self.logger.info(
@@ -526,6 +523,7 @@ class PlayerController(CoreController):
             await player_provider.cmd_volume_mute(player_id, muted)
 
     @api_command("players/cmd/play_announcement")
+    @lock
     async def play_announcement(
         self,
         player_id: str,
@@ -537,10 +535,6 @@ class PlayerController(CoreController):
         player = self.get(player_id, True)
         if not url.startswith("http"):
             raise PlayerCommandFailed("Only URLs are supported for announcements")
-        if player.announcement_in_progress:
-            raise PlayerCommandFailed(
-                f"An announcement is already in progress to player {player.display_name}"
-            )
         try:
             # mark announcement_in_progress on player
             player.announcement_in_progress = True
@@ -589,7 +583,8 @@ class PlayerController(CoreController):
             # handle native announce support
             if native_announce_support:
                 if prov := self.mass.get_provider(player.provider):
-                    await prov.play_announcement(player_id, announcement, volume_level)
+                    announcement_volume = self.get_announcement_volume(player_id, volume_level)
+                    await prov.play_announcement(player_id, announcement, announcement_volume)
                     return
             # use fallback/default implementation
             await self._play_announcement(player, announcement, volume_level)

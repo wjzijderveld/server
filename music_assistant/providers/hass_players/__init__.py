@@ -7,6 +7,7 @@ Requires the Home Assistant Plugin.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from enum import IntFlag
 from typing import TYPE_CHECKING, Any
@@ -26,6 +27,7 @@ from music_assistant.constants import (
     CONF_ENTRY_HTTP_PROFILE,
 )
 from music_assistant.helpers.datetime import from_iso_string
+from music_assistant.helpers.tags import parse_tags
 from music_assistant.models.player_provider import PlayerProvider
 from music_assistant.providers.hass import DOMAIN as HASS_DOMAIN
 
@@ -93,6 +95,7 @@ PLAYER_CONFIG_ENTRIES = (
     CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED,
     CONF_ENTRY_HTTP_PROFILE,
     CONF_ENTRY_ENABLE_ICY_METADATA,
+    CONF_ENTRY_FLOW_MODE_ENFORCED,
 )
 
 
@@ -103,7 +106,7 @@ async def _get_hass_media_players(
     for state in await hass_prov.hass.get_states():
         if not state["entity_id"].startswith("media_player"):
             continue
-        if "mass_player_id" in state["attributes"]:
+        if "mass_player_type" in state["attributes"]:
             # filter out mass players
             continue
         if "friendly_name" not in state["attributes"]:
@@ -113,16 +116,6 @@ async def _get_hass_media_players(
         if MediaPlayerEntityFeature.PLAY_MEDIA not in supported_features:
             continue
         yield state
-
-
-async def _get_hass_media_player(
-    hass_prov: HomeAssistantProvider, entity_id: str
-) -> HassState | None:
-    """Return Hass state object for a single media_player entity."""
-    for state in await hass_prov.hass.get_states():
-        if state["entity_id"] == entity_id:
-            return state
-    return None
 
 
 async def setup(
@@ -202,16 +195,8 @@ class HomeAssistantPlayers(PlayerProvider):
         player_id: str,
     ) -> tuple[ConfigEntry, ...]:
         """Return all (provider/player specific) Config Entries for the given player (if any)."""
-        entries = await super().get_player_config_entries(player_id)
-        entries = entries + PLAYER_CONFIG_ENTRIES
-        if hass_state := await _get_hass_media_player(self.hass_prov, player_id):
-            hass_supported_features = MediaPlayerEntityFeature(
-                hass_state["attributes"]["supported_features"]
-            )
-            if MediaPlayerEntityFeature.MEDIA_ENQUEUE not in hass_supported_features:
-                entries += (CONF_ENTRY_FLOW_MODE_ENFORCED,)
-
-        return entries
+        base_entries = await super().get_player_config_entries(player_id)
+        return base_entries + PLAYER_CONFIG_ENTRIES
 
     async def cmd_stop(self, player_id: str) -> None:
         """Send STOP command to given player.
@@ -281,19 +266,38 @@ class HomeAssistantPlayers(PlayerProvider):
             player.elapsed_time = 0
             player.elapsed_time_last_updated = time.time()
 
-    async def enqueue_next_media(self, player_id: str, media: PlayerMedia) -> None:
-        """Handle enqueuing of the next queue item on the player."""
-        if self.mass.config.get_raw_player_config_value(player_id, CONF_ENFORCE_MP3, True):
-            media.uri = media.uri.replace(".flac", ".mp3")
+    async def play_announcement(
+        self, player_id: str, announcement: PlayerMedia, volume_level: int | None = None
+    ) -> None:
+        """Handle (provider native) playback of an announcement on given player."""
+        player = self.mass.players.get(player_id, True)
+        self.logger.info(
+            "Playing announcement %s on %s",
+            announcement.uri,
+            player.display_name,
+        )
+        if volume_level is not None:
+            self.logger.warning(
+                "Announcement volume level is not supported for player %s", player.display_name
+            )
         await self.hass_prov.hass.call_service(
             domain="media_player",
             service="play_media",
             service_data={
-                "media_content_id": media.uri,
+                "media_content_id": announcement.uri,
                 "media_content_type": "music",
-                "enqueue": "next",
+                "announce": True,
             },
             target={"entity_id": player_id},
+        )
+        # Wait until the announcement is finished playing
+        # This is helpful for people who want to play announcements in a sequence
+        media_info = await parse_tags(announcement.uri)
+        duration = media_info.duration or 5
+        await asyncio.sleep(duration)
+        self.logger.debug(
+            "Playing announcement on %s completed",
+            player.display_name,
         )
 
     async def cmd_power(self, player_id: str, powered: bool) -> None:
@@ -372,25 +376,25 @@ class HomeAssistantPlayers(PlayerProvider):
     ) -> None:
         """Handle setup of a Player from an hass entity."""
         hass_device: HassDevice | None = None
+        hass_domain: str | None = None
         if entity_registry_entry := entity_registry.get(state["entity_id"]):
             hass_device = device_registry.get(entity_registry_entry["device_id"])
-        hass_supported_features = MediaPlayerEntityFeature(
-            state["attributes"]["supported_features"]
-        )
-        supported_features: set[PlayerFeature] = set()
-        if MediaPlayerEntityFeature.PAUSE in hass_supported_features:
-            supported_features.add(PlayerFeature.PAUSE)
-        if MediaPlayerEntityFeature.VOLUME_SET in hass_supported_features:
-            supported_features.add(PlayerFeature.VOLUME_SET)
-        if MediaPlayerEntityFeature.VOLUME_MUTE in hass_supported_features:
-            supported_features.add(PlayerFeature.VOLUME_MUTE)
-        if MediaPlayerEntityFeature.MEDIA_ENQUEUE in hass_supported_features:
-            supported_features.add(PlayerFeature.ENQUEUE)
-        if (
-            MediaPlayerEntityFeature.TURN_ON in hass_supported_features
-            and MediaPlayerEntityFeature.TURN_OFF in hass_supported_features
-        ):
-            supported_features.add(PlayerFeature.POWER)
+            hass_domain = entity_registry_entry["platform"]
+
+        dev_info: dict[str, Any] = {}
+        if hass_device and (model := hass_device.get("model")):
+            dev_info["model"] = model
+        if hass_device and (manufacturer := hass_device.get("manufacturer")):
+            dev_info["manufacturer"] = manufacturer
+        if hass_device and (model_id := hass_device.get("model_id")):
+            dev_info["model_id"] = model_id
+        if hass_device and (sw_version := hass_device.get("sw_version")):
+            dev_info["software_version"] = sw_version
+        if hass_device and (connections := hass_device.get("connections")):
+            for key, value in connections:
+                if key == "mac":
+                    dev_info["mac_address"] = value
+
         player = Player(
             player_id=state["entity_id"],
             provider=self.instance_id,
@@ -398,15 +402,34 @@ class HomeAssistantPlayers(PlayerProvider):
             name=state["attributes"]["friendly_name"],
             available=state["state"] not in ("unavailable", "unknown"),
             powered=state["state"] not in ("unavailable", "unknown", "standby", "off"),
-            device_info=DeviceInfo(
-                model=hass_device["model"] if hass_device else "Unknown model",
-                manufacturer=(
-                    hass_device["manufacturer"] if hass_device else "Unknown Manufacturer"
-                ),
-            ),
-            supported_features=supported_features,
+            device_info=DeviceInfo.from_dict(dev_info),
             state=StateMap.get(state["state"], PlayerState.IDLE),
         )
+        # work out supported features
+        hass_supported_features = MediaPlayerEntityFeature(
+            state["attributes"]["supported_features"]
+        )
+        if MediaPlayerEntityFeature.PAUSE in hass_supported_features:
+            player.supported_features.add(PlayerFeature.PAUSE)
+        if MediaPlayerEntityFeature.VOLUME_SET in hass_supported_features:
+            player.supported_features.add(PlayerFeature.VOLUME_SET)
+        if MediaPlayerEntityFeature.VOLUME_MUTE in hass_supported_features:
+            player.supported_features.add(PlayerFeature.VOLUME_MUTE)
+        if MediaPlayerEntityFeature.MEDIA_ANNOUNCE in hass_supported_features:
+            player.supported_features.add(PlayerFeature.PLAY_ANNOUNCEMENT)
+        if hass_domain and MediaPlayerEntityFeature.GROUPING in hass_supported_features:
+            player.supported_features.add(PlayerFeature.SET_MEMBERS)
+            player.can_group_with = {
+                x["entity_id"]
+                for x in entity_registry.values()
+                if x["entity_id"].startswith("media_player") and x["platform"] == hass_domain
+            }
+        if (
+            MediaPlayerEntityFeature.TURN_ON in hass_supported_features
+            and MediaPlayerEntityFeature.TURN_OFF in hass_supported_features
+        ):
+            player.supported_features.add(PlayerFeature.POWER)
+
         self._update_player_attributes(player, state["attributes"])
         await self.mass.players.register_or_update(player)
 
