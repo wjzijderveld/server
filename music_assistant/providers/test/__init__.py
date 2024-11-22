@@ -150,7 +150,9 @@ class TestProvider(MusicProvider):
                     track_item_id = f"{artist_idx}_{album_idx}_{track_idx}"
                     yield await self.get_track(track_item_id)
 
-    async def get_stream_details(self, item_id: str) -> StreamDetails:
+    async def get_stream_details(
+        self, item_id: str, media_type: MediaType = MediaType.TRACK
+    ) -> StreamDetails:
         """Get streamdetails for a track/radio."""
         return StreamDetails(
             provider=self.instance_id,

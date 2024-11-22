@@ -238,7 +238,9 @@ class TuneInProvider(MusicProvider):
         await self.mass.cache.set(preset_id, result, base_key=cache_base_key)
         return result
 
-    async def get_stream_details(self, item_id: str) -> StreamDetails:
+    async def get_stream_details(
+        self, item_id: str, media_type: MediaType = MediaType.RADIO
+    ) -> StreamDetails:
         """Get streamdetails for a radio station."""
         if item_id.startswith("http"):
             # custom url

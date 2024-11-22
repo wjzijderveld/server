@@ -564,7 +564,9 @@ class TidalProvider(MusicProvider):
         )
         return self._parse_playlist(playlist_obj)
 
-    async def get_stream_details(self, item_id: str) -> StreamDetails:
+    async def get_stream_details(
+        self, item_id: str, media_type: MediaType = MediaType.TRACK
+    ) -> StreamDetails:
         """Return the content details for the given track when it will be streamed."""
         tidal_session = await self._get_tidal_session()
         # make sure a valid track is requested.

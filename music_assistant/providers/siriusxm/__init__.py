@@ -211,7 +211,9 @@ class SiriusXMProvider(MusicProvider):
 
         return self._parse_radio(self._channels_by_id[prov_radio_id])
 
-    async def get_stream_details(self, item_id: str) -> StreamDetails:
+    async def get_stream_details(
+        self, item_id: str, media_type: MediaType = MediaType.RADIO
+    ) -> StreamDetails:
         """Get streamdetails for a track/radio."""
         hls_path = f"http://{self._base_url}/{item_id}.m3u8"
 

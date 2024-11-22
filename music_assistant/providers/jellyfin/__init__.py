@@ -431,7 +431,9 @@ class JellyfinProvider(MusicProvider):
             for album in albums["Items"]
         ]
 
-    async def get_stream_details(self, item_id: str) -> StreamDetails:
+    async def get_stream_details(
+        self, item_id: str, media_type: MediaType = MediaType.TRACK
+    ) -> StreamDetails:
         """Return the content details for the given track when it will be streamed."""
         jellyfin_track = await self._client.get_track(item_id)
         mimetype = self._media_mime_type(jellyfin_track)
