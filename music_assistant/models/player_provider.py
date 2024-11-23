@@ -123,6 +123,11 @@ class PlayerProvider(Provider):
         # will only be called for players with PLAY_ANNOUNCEMENT feature set.
         raise NotImplementedError
 
+    async def select_source(self, player_id: str, source: str) -> None:
+        """Handle SELECT SOURCE command on given player."""
+        # will only be called for sources that are defined in 'source_list'.
+        raise NotImplementedError
+
     async def cmd_power(self, player_id: str, powered: bool) -> None:
         """Send POWER command to given player.
 

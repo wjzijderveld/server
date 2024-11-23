@@ -46,6 +46,7 @@ from music_assistant.constants import (
 from music_assistant.helpers.api import api_command
 from music_assistant.helpers.tags import parse_tags
 from music_assistant.helpers.throttle_retry import Throttler
+from music_assistant.helpers.uri import parse_uri
 from music_assistant.helpers.util import TaskManager, get_changed_values, lock
 from music_assistant.models.core_controller import CoreController
 from music_assistant.models.player_provider import PlayerProvider
@@ -618,6 +619,32 @@ class PlayerController(CoreController):
         player_prov = self.mass.get_provider(player.provider)
         async with self._player_throttlers[player_id]:
             await player_prov.enqueue_next_media(player_id=player_id, media=media)
+
+    async def select_source(self, player_id: str, source: str) -> None:
+        """
+        Handle SELECT SOURCE command on given player.
+
+        - player_id: player_id of the player to handle the command.
+        - source: The ID of the source that needs to be activated/selected.
+        """
+        player = self.get(player_id, True)
+        # handle source_id from source plugin
+        if "://plugin_source/" in source:
+            await self._play_plugin_source(player, source)
+            return
+        # basic check if player supports source selection
+        if PlayerFeature.SELECT_SOURCE not in player.supported_features:
+            raise UnsupportedFeaturedException(
+                f"Player {player.display_name} does not support source selection"
+            )
+        # basic check if source is valid for player
+        if not any(x for x in player.source_list if x.id == source):
+            raise PlayerCommandFailed(
+                f"{source} is an invalid source for player {player.display_name}"
+            )
+        # forward to player provider
+        provider = self.mass.get_provider(player.provider)
+        await provider.select_source(player_id, source)
 
     @api_command("players/cmd/group")
     @handle_player_command
@@ -1293,6 +1320,23 @@ class PlayerController(CoreController):
             # player was playing something else - try to resume that here
             self.logger.warning("Can not resume %s on %s", prev_item_id, player.display_name)
             # TODO !!
+
+    async def _play_plugin_source(self, player: Player, source: str) -> None:
+        """Handle playback of a plugin source on the player."""
+        _, provider_id, source_id = await parse_uri(source)
+        if not (provider := self.mass.get_provider(provider_id)):
+            raise PlayerCommandFailed(f"Invalid (plugin)source {source}")
+        player_source = await provider.get_source(source_id)
+        url = self.mass.streams.get_plugin_source_url(provider_id, source_id, player.player_id)
+        # create a PlayerMedia object for the plugin source so
+        # we can send a regular play-media call downstream
+        media = player_source.metadata or PlayerMedia(
+            uri=url,
+            media_type=MediaType.OTHER,
+            title=player_source.name,
+            custom_data={"source": source},
+        )
+        await self.play_media(player.player_id, media)
 
     async def _poll_players(self) -> None:
         """Background task that polls players for updates."""
