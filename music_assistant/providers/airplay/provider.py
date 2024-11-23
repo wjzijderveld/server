@@ -298,7 +298,7 @@ class AirplayProvider(PlayerProvider):
                 output_format=AIRPLAY_PCM_FORMAT,
                 use_pre_announce=media.custom_data["use_pre_announce"],
             )
-        elif media.queue_id.startswith("ugp_"):
+        elif media.queue_id and media.queue_id.startswith("ugp_"):
             # special case: UGP stream
             ugp_provider: PlayerGroupProvider = self.mass.get_provider("player_group")
             ugp_stream = ugp_provider.ugp_streams[media.queue_id]
@@ -320,7 +320,7 @@ class AirplayProvider(PlayerProvider):
             input_format = AIRPLAY_PCM_FORMAT
             audio_source = get_ffmpeg_stream(
                 audio_input=media.uri,
-                input_format=AudioFormat(ContentType.try_parse(media.uri)),
+                input_format=AudioFormat(content_type=ContentType.try_parse(media.uri)),
                 output_format=AIRPLAY_PCM_FORMAT,
             )
         # setup RaopStreamSession for player (and its sync childs if any)
