@@ -924,6 +924,7 @@ class StreamsController(CoreController):
         ):
             # apply used defined fixed volume/gain correction
             gain_correct: float = await self.mass.config.get_core_config_value(
+                self.domain,
                 CONF_VOLUME_NORMALIZATION_FIXED_GAIN_RADIO
                 if streamdetails.media_type == MediaType.RADIO
                 else CONF_VOLUME_NORMALIZATION_FIXED_GAIN_TRACKS,
