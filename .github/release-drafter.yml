@@ -7,24 +7,27 @@ categories:
     labels:
       - 'breaking-change'
 
-  - title: "Bugfixes"
+  - title: "🐛 Bugfixes"
     labels:
       - 'bugfix'
 
-  - title: "New features"
+  - title: "🚀 Features"
     labels:
       - 'feature'
       - 'enhancement'
       - 'new-feature'
       - 'new-provider'
 
-  - title: '⬆️ Dependencies and various chores/maintenance'
-    collapse-after: 1
+  - title: '🧰 Maintenance'
     labels:
-      - 'dependencies'
       - 'ci'
       - 'documentation'
       - 'maintenance'
+
+  - title: '⬆️ Dependencies'
+    collapse-after: 1
+    labels:
+      - 'dependencies'
 
 template: |
   ## What’s Changed
