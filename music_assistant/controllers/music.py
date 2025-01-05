@@ -78,7 +78,7 @@ DEFAULT_SYNC_INTERVAL = 3 * 60  # default sync interval in minutes
 CONF_SYNC_INTERVAL = "sync_interval"
 CONF_DELETED_PROVIDERS = "deleted_providers"
 CONF_ADD_LIBRARY_ON_PLAY = "add_library_on_play"
-DB_SCHEMA_VERSION: Final[int] = 12
+DB_SCHEMA_VERSION: Final[int] = 13
 
 
 class MusicController(CoreController):
@@ -443,7 +443,12 @@ class MusicController(CoreController):
         else:
             back_path = f"{provider_instance}://" + "/".join(sub_path.split("/")[:-1])
             prepend_items.append(
-                BrowseFolder(item_id="back", provider=provider_instance, path=back_path, name="..")
+                BrowseFolder(
+                    item_id="back",
+                    provider=provider_instance,
+                    path=back_path,
+                    name="..",
+                )
             )
         # limit -1 to account for the prepended items
         prov_items = await prov.browse(path=path)
@@ -500,6 +505,9 @@ class MusicController(CoreController):
         if provider_instance_id_or_domain == "builtin":
             # handle special case of 'builtin' MusicProvider which allows us to play regular url's
             return await self.mass.get_provider("builtin").parse_item(item_id)
+        if media_type == MediaType.PODCAST_EPISODE:
+            # special case for podcast episodes
+            return await self.podcasts.episode(item_id, provider_instance_id_or_domain)
         ctrl = self.get_controller(media_type)
         return await ctrl.get(
             item_id=item_id,
@@ -648,7 +656,9 @@ class MusicController(CoreController):
                 continue
             with suppress(MediaNotFoundError):
                 media_item = await ctrl.get_provider_item(
-                    prov_mapping.item_id, prov_mapping.provider_instance, force_refresh=True
+                    prov_mapping.item_id,
+                    prov_mapping.provider_instance,
+                    force_refresh=True,
                 )
                 provider = media_item.provider
                 item_id = media_item.item_id
@@ -859,13 +869,9 @@ class MusicController(CoreController):
             return self.playlists
         if media_type == MediaType.AUDIOBOOK:
             return self.audiobooks
-        if media_type == MediaType.CHAPTER:
-            return self.audiobooks
-        if media_type == MediaType.EPISODE:
-            return self.podcasts
         if media_type == MediaType.PODCAST:
             return self.podcasts
-        if media_type == MediaType.EPISODE:
+        if media_type == MediaType.PODCAST_EPISODE:
             return self.podcasts
         return None
 
@@ -969,7 +975,8 @@ class MusicController(CoreController):
 
         # cleanup media items from db matched to deleted provider
         self.logger.info(
-            "Removing provider %s from library, this can take a a while...", provider_instance
+            "Removing provider %s from library, this can take a a while...",
+            provider_instance,
         )
         errors = 0
         for ctrl in (
@@ -1047,7 +1054,13 @@ class MusicController(CoreController):
             DB_TABLE_PLAYLOG, f"timestamp < strftime('%s','now') - {3600 * 24  * 90}"
         )
         # db tables cleanup
-        for ctrl in (self.albums, self.artists, self.tracks, self.playlists, self.radio):
+        for ctrl in (
+            self.albums,
+            self.artists,
+            self.tracks,
+            self.playlists,
+            self.radio,
+        ):
             # Provider mappings where the db item is removed
             query = (
                 f"item_id not in (SELECT item_id from {ctrl.db_table}) "
@@ -1204,10 +1217,7 @@ class MusicController(CoreController):
             await self.database.execute("DROP TABLE IF EXISTS track_loudness")
 
         if prev_version <= 10:
-            # recreate db tables for audiobooks and podcasts due to some mistakes in early version
-            await self.database.execute(f"DROP TABLE IF EXISTS {DB_TABLE_AUDIOBOOKS}")
-            await self.database.execute(f"DROP TABLE IF EXISTS {DB_TABLE_PODCASTS}")
-            await self.__create_database_tables()
+            # add new columns to playlog table
             try:
                 await self.database.execute(
                     f"ALTER TABLE {DB_TABLE_PLAYLOG} ADD COLUMN fully_played BOOLEAN"
@@ -1219,7 +1229,7 @@ class MusicController(CoreController):
                 if "duplicate column" not in str(err):
                     raise
 
-        if prev_version <= 11:
+        if prev_version <= 12:
             # Need to drop the NOT NULL requirement on podcasts.publisher and audiobooks.publisher
             # However, because there is no ALTER COLUMN support in sqlite, we will need
             # to create the tables again.
@@ -1351,10 +1361,10 @@ class MusicController(CoreController):
             [version] TEXT,
             [favorite] BOOLEAN DEFAULT 0,
             [publisher] TEXT,
-            [total_chapters] INTEGER,
             [authors] json NOT NULL,
             [narrators] json NOT NULL,
             [metadata] json NOT NULL,
+            [duration] INTEGER,
             [external_ids] json NOT NULL,
             [play_count] INTEGER DEFAULT 0,
             [last_played] INTEGER DEFAULT 0,

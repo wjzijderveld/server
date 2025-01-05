@@ -19,12 +19,12 @@ from music_assistant_models.media_items import (
     Artist,
     Audiobook,
     AudioFormat,
-    Chapter,
-    Episode,
     ItemMapping,
+    MediaItemChapter,
     MediaItemImage,
     MediaItemMetadata,
     Podcast,
+    PodcastEpisode,
     ProviderMapping,
     Track,
     UniqueList,
@@ -234,7 +234,15 @@ class TestProvider(MusicProvider):
             item_id=prov_audiobook_id,
             provider=self.instance_id,
             name=f"Test Audiobook {prov_audiobook_id}",
-            metadata=MediaItemMetadata(images=UniqueList([DEFAULT_THUMB])),
+            metadata=MediaItemMetadata(
+                images=UniqueList([DEFAULT_THUMB]),
+                description="This is a description for Test Audiobook",
+                chapters=[
+                    MediaItemChapter(position=1, name="Chapter 1", start=10, end=20),
+                    MediaItemChapter(position=2, name="Chapter 2", start=20, end=40),
+                    MediaItemChapter(position=2, name="Chapter 3", start=40),
+                ],
+            ),
             provider_mappings={
                 ProviderMapping(
                     item_id=prov_audiobook_id,
@@ -243,9 +251,9 @@ class TestProvider(MusicProvider):
                 )
             },
             publisher="Test Publisher",
-            total_chapters=10,
             authors=UniqueList(["AudioBook Author"]),
             narrators=UniqueList(["AudioBook Narrator"]),
+            duration=60,
         )
 
     async def get_library_artists(self) -> AsyncGenerator[Artist, None]:
@@ -274,7 +282,7 @@ class TestProvider(MusicProvider):
                     track_item_id = f"{artist_idx}_{album_idx}_{track_idx}"
                     yield await self.get_track(track_item_id)
 
-    async def get_library_podcasts(self) -> AsyncGenerator[Track, None]:
+    async def get_library_podcasts(self) -> AsyncGenerator[Podcast, None]:
         """Retrieve library tracks from the provider."""
         num_podcasts = self.config.get_value(CONF_KEY_NUM_PODCASTS)
         for podcast_idx in range(num_podcasts):
@@ -286,75 +294,45 @@ class TestProvider(MusicProvider):
         for audiobook_idx in range(num_audiobooks):
             yield await self.get_audiobook(str(audiobook_idx))
 
-    async def get_audiobook_chapters(
-        self,
-        prov_audiobook_id: str,
-    ) -> list[Chapter]:
-        """Get all Chapters for given audiobook id."""
-        num_chapters = 25
-        return [
-            Chapter(
-                item_id=f"{prov_audiobook_id}_{chapter_idx}",
-                provider=self.instance_id,
-                name=f"Test Chapter {prov_audiobook_id}-{chapter_idx}",
-                duration=60,
-                audiobook=ItemMapping(
-                    item_id=prov_audiobook_id,
-                    provider=self.instance_id,
-                    name=f"Test Audiobook {prov_audiobook_id}",
-                    media_type=MediaType.AUDIOBOOK,
-                    image=DEFAULT_THUMB,
-                ),
-                provider_mappings={
-                    ProviderMapping(
-                        item_id=f"{prov_audiobook_id}_{chapter_idx}",
-                        provider_domain=self.domain,
-                        provider_instance=self.instance_id,
-                    )
-                },
-                metadata=MediaItemMetadata(
-                    description="This is a description for "
-                    f"Test Chapter {chapter_idx} of Test Audiobook {prov_audiobook_id}"
-                ),
-                position=chapter_idx,
-            )
-            for chapter_idx in range(num_chapters)
-        ]
-
     async def get_podcast_episodes(
         self,
         prov_podcast_id: str,
-    ) -> list[Episode]:
-        """Get all Episodes for given podcast id."""
+    ) -> list[PodcastEpisode]:
+        """Get all PodcastEpisodes for given podcast id."""
         num_episodes = 25
         return [
-            Episode(
-                item_id=f"{prov_podcast_id}_{episode_idx}",
-                provider=self.instance_id,
-                name=f"Test Episode {prov_podcast_id}-{episode_idx}",
-                duration=60,
-                podcast=ItemMapping(
-                    item_id=prov_podcast_id,
-                    provider=self.instance_id,
-                    name=f"Test Podcast {prov_podcast_id}",
-                    media_type=MediaType.PODCAST,
-                    image=DEFAULT_THUMB,
-                ),
-                provider_mappings={
-                    ProviderMapping(
-                        item_id=f"{prov_podcast_id}_{episode_idx}",
-                        provider_domain=self.domain,
-                        provider_instance=self.instance_id,
-                    )
-                },
-                metadata=MediaItemMetadata(
-                    description="This is a description for "
-                    f"Test Episode {episode_idx} of Test Podcast {prov_podcast_id}"
-                ),
-                position=episode_idx,
-            )
+            await self.get_podcast_episode(f"{prov_podcast_id}_{episode_idx}")
             for episode_idx in range(num_episodes)
         ]
+
+    async def get_podcast_episode(self, prov_episode_id: str) -> PodcastEpisode:
+        """Get (full) podcast episode details by id."""
+        podcast_id, episode_idx = prov_episode_id.split("_", 2)
+        return PodcastEpisode(
+            item_id=prov_episode_id,
+            provider=self.instance_id,
+            name=f"Test PodcastEpisode {podcast_id}-{episode_idx}",
+            duration=60,
+            podcast=ItemMapping(
+                item_id=podcast_id,
+                provider=self.instance_id,
+                name=f"Test Podcast {podcast_id}",
+                media_type=MediaType.PODCAST,
+                image=DEFAULT_THUMB,
+            ),
+            provider_mappings={
+                ProviderMapping(
+                    item_id=prov_episode_id,
+                    provider_domain=self.domain,
+                    provider_instance=self.instance_id,
+                )
+            },
+            metadata=MediaItemMetadata(
+                description="This is a description for "
+                f"Test PodcastEpisode {episode_idx} of Test Podcast {podcast_id}"
+            ),
+            position=int(episode_idx),
+        )
 
     async def get_stream_details(
         self, item_id: str, media_type: MediaType = MediaType.TRACK

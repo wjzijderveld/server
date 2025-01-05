@@ -13,12 +13,11 @@ from music_assistant_models.media_items import (
     Artist,
     Audiobook,
     BrowseFolder,
-    Chapter,
-    Episode,
     ItemMapping,
     MediaItemType,
     Playlist,
     Podcast,
+    PodcastEpisode,
     Radio,
     SearchResults,
     Track,
@@ -170,6 +169,11 @@ class MusicProvider(Provider):
         if ProviderFeature.LIBRARY_PODCASTS in self.supported_features:
             raise NotImplementedError
 
+    async def get_podcast_episode(self, prov_episode_id: str) -> PodcastEpisode:
+        """Get (full) podcast episode details by id."""
+        if ProviderFeature.LIBRARY_PODCASTS in self.supported_features:
+            raise NotImplementedError
+
     async def get_album_tracks(
         self,
         prov_album_id: str,  # type: ignore[return]
@@ -187,19 +191,11 @@ class MusicProvider(Provider):
         if ProviderFeature.LIBRARY_PLAYLISTS in self.supported_features:
             raise NotImplementedError
 
-    async def get_audiobook_chapters(
-        self,
-        prov_audiobook_id: str,
-    ) -> list[Chapter]:
-        """Get all Chapters for given audiobook id."""
-        if ProviderFeature.LIBRARY_AUDIOBOOKS in self.supported_features:
-            raise NotImplementedError
-
     async def get_podcast_episodes(
         self,
         prov_podcast_id: str,
-    ) -> list[Episode]:
-        """Get all Episodes for given podcast id."""
+    ) -> list[PodcastEpisode]:
+        """Get all PodcastEpisodes for given podcast id."""
         if ProviderFeature.LIBRARY_PODCASTS in self.supported_features:
             raise NotImplementedError
 
@@ -364,10 +360,8 @@ class MusicProvider(Provider):
             return await self.get_audiobook(prov_item_id)
         if media_type == MediaType.PODCAST:
             return await self.get_podcast(prov_item_id)
-        if media_type == MediaType.CHAPTER:
-            return await self.get_chapter(prov_item_id)
-        if media_type == MediaType.EPISODE:
-            return await self.get_episode(prov_item_id)
+        if media_type == MediaType.PODCAST_EPISODE:
+            return await self.get_podcast_episode(prov_item_id)
         return await self.get_track(prov_item_id)
 
     async def browse(self, path: str) -> Sequence[MediaItemType | ItemMapping]:  # noqa: PLR0915

@@ -44,18 +44,22 @@ from music_assistant_models.errors import (
     UnsupportedFeaturedException,
 )
 from music_assistant_models.media_items import (
-    Chapter,
-    Episode,
     MediaItemType,
     PlayableMediaItemType,
     Playlist,
+    PodcastEpisode,
     media_from_dict,
 )
 from music_assistant_models.player import PlayerMedia
 from music_assistant_models.player_queue import PlayerQueue
 from music_assistant_models.queue_item import QueueItem
 
-from music_assistant.constants import CONF_CROSSFADE, CONF_FLOW_MODE, MASS_LOGO_ONLINE
+from music_assistant.constants import (
+    CONF_CROSSFADE,
+    CONF_FLOW_MODE,
+    DB_TABLE_PLAYLOG,
+    MASS_LOGO_ONLINE,
+)
 from music_assistant.helpers.api import api_command
 from music_assistant.helpers.audio import get_stream_details
 from music_assistant.helpers.throttle_retry import BYPASS_THROTTLER
@@ -88,9 +92,8 @@ CONF_DEFAULT_ENQUEUE_OPTION_TRACK = "default_enqueue_option_track"
 CONF_DEFAULT_ENQUEUE_OPTION_RADIO = "default_enqueue_option_radio"
 CONF_DEFAULT_ENQUEUE_OPTION_PLAYLIST = "default_enqueue_option_playlist"
 CONF_DEFAULT_ENQUEUE_OPTION_AUDIOBOOK = "default_enqueue_option_audiobook"
-CONF_DEFAULT_ENQUEUE_OPTION_CHAPTER = "default_enqueue_option_chapter"
 CONF_DEFAULT_ENQUEUE_OPTION_PODCAST = "default_enqueue_option_podcast"
-CONF_DEFAULT_ENQUEUE_OPTION_EPISODE = "default_enqueue_option_episode"
+CONF_DEFAULT_ENQUEUE_OPTION_PODCAST_EPISODE = "default_enqueue_option_podcast_episode"
 CONF_DEFAULT_ENQUEUE_OPTION_FOLDER = "default_enqueue_option_folder"
 CONF_DEFAULT_ENQUEUE_OPTION_UNKNOWN = "default_enqueue_option_unknown"
 RADIO_TRACK_MAX_DURATION_SECS = 20 * 60  # 20 minutes
@@ -241,15 +244,7 @@ class PlayerQueuesController(CoreController):
                 hidden=True,
             ),
             ConfigEntry(
-                key=CONF_DEFAULT_ENQUEUE_OPTION_CHAPTER,
-                type=ConfigEntryType.STRING,
-                default_value=QueueOption.REPLACE.value,
-                label="Default enqueue option for Audiobook-chapter item(s).",
-                options=enqueue_options,
-                hidden=True,
-            ),
-            ConfigEntry(
-                key=CONF_DEFAULT_ENQUEUE_OPTION_EPISODE,
+                key=CONF_DEFAULT_ENQUEUE_OPTION_PODCAST_EPISODE,
                 type=ConfigEntryType.STRING,
                 default_value=QueueOption.REPLACE.value,
                 label="Default enqueue option for Podcast-episode item(s).",
@@ -1417,45 +1412,53 @@ class PlayerQueuesController(CoreController):
             result.append(playlist_track)
         return result
 
-    async def get_next_audio_book_chapters(
-        self, audio_book: Audiobook | None, chapter: Chapter | str | None
-    ) -> UniqueList[Chapter]:
-        """Return (next) chapter(s) and resume point for given audio book."""
-        if audio_book is None and isinstance(chapter, str | NoneType):
-            raise InvalidDataError("Either audio_book or chapter must be provided")
-        if audio_book is None:
-            audio_book = chapter.audiobook
+    async def get_audiobook_resume_point(
+        self, audio_book: Audiobook, chapter: str | int | None = None
+    ) -> int:
+        """Return resume point (in milliseconds) for given audio book."""
         self.logger.debug(
-            "Fetching chapter(s) and resume point to play for audio book %s",
+            "Fetching resume point to play for audio book %s",
             audio_book.name,
         )
-        all_chapters = await self.mass.music.audiobooks.chapters(
-            audio_book.item_id, audio_book.provider
-        )
-        # if a chapter was provided, a user explicitly selected a chapter to play
-        # so we need to find the index of the chapter in the list
-        if isinstance(chapter, Chapter):
-            chapter = next((x for x in all_chapters if x.uri == chapter.uri), None)
-        elif isinstance(chapter, str):
-            chapter = next((x for x in all_chapters if x.uri == chapter), None)
-        else:
-            # get first chapter that is not fully played
-            chapter = next((x for x in all_chapters if not x.fully_played), None)
-            if chapter is None:
-                # no chapters found that are not fully played, so we start at the beginning
-                chapter = next((x for x in all_chapters), None)
-        if chapter is None:
+        if chapter is not None:
+            # user explicitly selected a chapter to play
+            if isinstance(chapter, str):
+                start_chapter = int(chapter)
+            if chapters := audio_book.metadata.chapters:
+                if _chapter := next((x for x in chapters if x.position == start_chapter), None):
+                    return _chapter.start * 1000
             raise InvalidDataError(
-                f"Unable to resolve chapter to play for Audio Book {audio_book.name}"
+                f"Unable to resolve chapter to play for Audiobook {audio_book.name}"
             )
-        # get the index of the chapter
-        chapter_index = all_chapters.index(chapter)
-        # return the (remaining) chapter(s) to play
-        return all_chapters[chapter_index:]
+        # prefer the resume point from the provider's item
+        for prov_mapping in audio_book.provider_mappings:
+            if not (provider := self.mass.get_provider(prov_mapping.provider_instance)):
+                continue
+            if provider_item := await provider.get_audiobook(prov_mapping.item_id):
+                if provider_item.fully_played:
+                    return 0
+                if provider_item.resume_position_ms is not None:
+                    return provider_item.resume_position_ms
+            # fallback to the resume point from the playlog (if available)
+            resume_info_db_row = await self.mass.music.database.get_row(
+                DB_TABLE_PLAYLOG,
+                {
+                    "item_id": prov_mapping.item_id,
+                    "provider": provider.lookup_key,
+                    "media_type": MediaType.AUDIOBOOK,
+                },
+            )
+            if resume_info_db_row is None:
+                continue
+            if resume_info_db_row["fully_played"]:
+                return 0
+            if resume_info_db_row["seconds_played"]:
+                return int(resume_info_db_row["seconds_played"] * 1000)
+        return 0
 
     async def get_next_podcast_episodes(
-        self, podcast: Podcast | None, episode: Episode | str | None
-    ) -> UniqueList[Episode]:
+        self, podcast: Podcast | None, episode: PodcastEpisode | str | None
+    ) -> UniqueList[PodcastEpisode]:
         """Return (next) episode(s) and resume point for given podcast."""
         if podcast is None and isinstance(episode, str | NoneType):
             raise InvalidDataError("Either podcast or episode must be provided")
@@ -1468,10 +1471,10 @@ class PlayerQueuesController(CoreController):
         all_episodes = await self.mass.music.podcasts.episodes(podcast.item_id, podcast.provider)
         # if a episode was provided, a user explicitly selected a episode to play
         # so we need to find the index of the episode in the list
-        if isinstance(episode, Episode):
+        if isinstance(episode, PodcastEpisode):
             episode = next((x for x in all_episodes if x.uri == episode.uri), None)
         elif isinstance(episode, str):
-            episode = next((x for x in all_episodes if x.uri == episode), None)
+            episode = next((x for x in all_episodes if episode in (x.uri, x.item_id)), None)
         else:
             # get first episode that is not fully played
             episode = next((x for x in all_episodes if not x.fully_played), None)
@@ -1599,14 +1602,9 @@ class PlayerQueuesController(CoreController):
             )
             return await self.get_album_tracks(media_item, start_item)
         if media_item.media_type == MediaType.AUDIOBOOK:
-            self.mass.create_task(
-                self.mass.music.mark_item_played(
-                    media_item.media_type, media_item.item_id, media_item.provider
-                )
-            )
-            return await self.get_next_audio_book_chapters(media_item, start_item)
-        if media_item.media_type == MediaType.CHAPTER:
-            return await self.get_next_audio_book_chapters(None, media_item)
+            if resume_point := await self.get_audiobook_resume_point(media_item, start_item):
+                media_item.resume_position_ms = resume_point
+            return [media_item]
         if media_item.media_type == MediaType.PODCAST:
             self.mass.create_task(
                 self.mass.music.mark_item_played(
@@ -1614,7 +1612,7 @@ class PlayerQueuesController(CoreController):
                 )
             )
             return await self.get_next_podcast_episodes(media_item, start_item or media_item)
-        if media_item.media_type == MediaType.EPISODE:
+        if media_item.media_type == MediaType.PODCAST_EPISODE:
             return await self.get_next_podcast_episodes(None, media_item)
         # all other: single track or radio item
         return [media_item]
@@ -1737,7 +1735,7 @@ class PlayerQueuesController(CoreController):
                 # NOTE: 'seconds_streamed' can actually be 0 if there was a stream error!
                 play_log_entry.seconds_streamed
                 if play_log_entry.seconds_streamed is not None
-                else play_log_entry.duration
+                else play_log_entry.duration or 3600 * 24 * 7
             )
             if elapsed_time_queue_total > (queue_item_duration + played_time):
                 # total elapsed time is more than (streamed) track duration

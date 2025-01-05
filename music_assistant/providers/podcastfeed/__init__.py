@@ -26,10 +26,10 @@ from music_assistant_models.enums import (
 from music_assistant_models.errors import InvalidProviderURI, MediaNotFoundError
 from music_assistant_models.media_items import (
     AudioFormat,
-    Episode,
     ItemMapping,
     MediaItemImage,
     Podcast,
+    PodcastEpisode,
     ProviderMapping,
 )
 from music_assistant_models.streamdetails import StreamDetails
@@ -87,7 +87,10 @@ class PodcastMusicprovider(MusicProvider):
     @property
     def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
-        return {ProviderFeature.BROWSE, ProviderFeature.SEARCH, ProviderFeature.LIBRARY_PODCASTS}
+        return {
+            ProviderFeature.BROWSE,
+            ProviderFeature.LIBRARY_PODCASTS,
+        }
 
     async def handle_async_init(self) -> None:
         """Handle async initialization of the provider."""
@@ -132,23 +135,21 @@ class PodcastMusicprovider(MusicProvider):
         else:
             raise Exception(f"Podcast id not in provider: {prov_podcast_id}")
 
-    async def get_episode(self, prov_episode_id: str) -> Episode:
+    async def get_podcast_episode(self, prov_episode_id: str) -> PodcastEpisode:
         """Get (full) podcast episode details by id."""
         for episode in self.parsed["episodes"]:
-            if prov_episode_id in episode["guid"]:
+            if prov_episode_id == episode["guid"]:
                 return await self._parse_episode(episode)
         raise MediaNotFoundError("Track not found")
 
     async def get_podcast_episodes(
         self,
         prov_podcast_id: str,
-    ) -> list[Episode]:
+    ) -> list[PodcastEpisode]:
         """List all episodes for the podcast."""
         episodes = []
-
         for episode in self.parsed["episodes"]:
-            episodes.append(await self._parse_episode(episode, prov_podcast_id))
-
+            episodes.append(await self._parse_episode(episode))
         return episodes
 
     async def get_stream_details(
@@ -156,7 +157,7 @@ class PodcastMusicprovider(MusicProvider):
     ) -> StreamDetails:
         """Get streamdetails for a track/radio."""
         for episode in self.parsed["episodes"]:
-            if item_id in episode["guid"]:
+            if item_id == episode["guid"]:
                 return StreamDetails(
                     provider=self.instance_id,
                     item_id=item_id,
@@ -164,7 +165,7 @@ class PodcastMusicprovider(MusicProvider):
                         # hard coded to unknown, so ffmpeg figures out
                         content_type=ContentType.UNKNOWN,
                     ),
-                    media_type=MediaType.PODCAST,
+                    media_type=MediaType.PODCAST_EPISODE,
                     stream_type=StreamType.HTTP,
                     path=episode["enclosures"][0]["url"],
                 )
@@ -180,7 +181,7 @@ class PodcastMusicprovider(MusicProvider):
             total_episodes=len(self.parsed["episodes"]),
             provider_mappings={
                 ProviderMapping(
-                    item_id=self.parsed["title"],
+                    item_id=self.podcast_id,
                     provider_domain=self.domain,
                     provider_instance=self.instance_id,
                 )
@@ -205,43 +206,44 @@ class PodcastMusicprovider(MusicProvider):
 
         return podcast
 
-    async def _parse_episode(self, track_obj: dict, prov_podcast_id: str) -> Episode:
-        name = track_obj["title"]
-        track_id = track_obj["guid"]
-        episode = Episode(
-            item_id=track_id,
+    async def _parse_episode(self, episode_obj: dict) -> PodcastEpisode:
+        name = episode_obj["title"]
+        item_id = episode_obj["guid"]
+        episode = PodcastEpisode(
+            item_id=item_id,
             provider=self.domain,
             name=name,
-            duration=track_obj["total_time"],
+            duration=episode_obj["total_time"],
+            position=episode_obj["number"],
             podcast=ItemMapping(
-                item_id=prov_podcast_id,
+                item_id=self.podcast_id,
                 provider=self.instance_id,
                 name=self.parsed["title"],
                 media_type=MediaType.PODCAST,
             ),
             provider_mappings={
                 ProviderMapping(
-                    item_id=track_id,
+                    item_id=item_id,
                     provider_domain=self.domain,
                     provider_instance=self.instance_id,
                     audio_format=AudioFormat(
                         content_type=ContentType.MP3,
                     ),
-                    url=track_obj["link"],
+                    url=episode_obj["link"],
                 )
             },
         )
 
-        if "episode_art_url" in track_obj:
+        if "episode_art_url" in episode_obj:
             episode.metadata.images = [
                 MediaItemImage(
                     type=ImageType.THUMB,
-                    path=track_obj["episode_art_url"],
+                    path=episode_obj["episode_art_url"],
                     provider=self.lookup_key,
                     remotely_accessible=True,
                 )
             ]
-        episode.metadata.description = track_obj["description"]
-        episode.metadata.explicit = track_obj["explicit"]
+        episode.metadata.description = episode_obj["description"]
+        episode.metadata.explicit = episode_obj["explicit"]
 
         return episode

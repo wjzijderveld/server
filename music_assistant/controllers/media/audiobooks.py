@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, Any
 
 from music_assistant_models.enums import MediaType, ProviderFeature
 from music_assistant_models.errors import InvalidDataError
-from music_assistant_models.media_items import Artist, Audiobook, Chapter, UniqueList
+from music_assistant_models.media_items import Artist, Audiobook, UniqueList
 
-from music_assistant.constants import DB_TABLE_AUDIOBOOKS, DB_TABLE_PLAYLOG
+from music_assistant.constants import DB_TABLE_AUDIOBOOKS
 from music_assistant.controllers.media.base import MediaControllerBase
 from music_assistant.helpers.compare import (
     compare_audiobook,
@@ -50,7 +49,6 @@ class AudiobooksController(MediaControllerBase[Audiobook]):
             FROM audiobooks"""  # noqa: E501
         # register (extra) api handlers
         api_base = self.api_base
-        self.mass.register_api_command(f"music/{api_base}/audiobook_chapters", self.chapters)
         self.mass.register_api_command(f"music/{api_base}/audiobook_versions", self.versions)
 
     async def library_items(
@@ -94,22 +92,6 @@ class AudiobooksController(MediaControllerBase[Audiobook]):
             )
         return result
 
-    async def chapters(
-        self,
-        item_id: str,
-        provider_instance_id_or_domain: str,
-    ) -> UniqueList[Chapter]:
-        """Return audiobook chapters for the given provider audiobook id."""
-        if library_audiobook := await self.get_library_item_by_prov_id(
-            item_id, provider_instance_id_or_domain
-        ):
-            # return items from first/only provider
-            for provider_mapping in library_audiobook.provider_mappings:
-                return await self._get_provider_audiobook_chapters(
-                    provider_mapping.item_id, provider_mapping.provider_instance
-                )
-        return await self._get_provider_audiobook_chapters(item_id, provider_instance_id_or_domain)
-
     async def versions(
         self,
         item_id: str,
@@ -149,9 +131,9 @@ class AudiobooksController(MediaControllerBase[Audiobook]):
                 "metadata": serialize_to_json(item.metadata),
                 "external_ids": serialize_to_json(item.external_ids),
                 "publisher": item.publisher,
-                "total_chapters": item.total_chapters,
                 "authors": serialize_to_json(item.authors),
                 "narrators": serialize_to_json(item.narrators),
+                "duration": item.duration,
             },
         )
         # update/set provider_mappings table
@@ -186,52 +168,18 @@ class AudiobooksController(MediaControllerBase[Audiobook]):
                     update.external_ids if overwrite else cur_item.external_ids
                 ),
                 "publisher": cur_item.publisher or update.publisher,
-                "total_chapters": cur_item.total_chapters or update.total_chapters,
                 "authors": serialize_to_json(
                     update.authors if overwrite else cur_item.authors or update.authors
                 ),
                 "narrators": serialize_to_json(
                     update.narrators if overwrite else cur_item.narrators or update.narrators
                 ),
+                "duration": update.duration or update.duration,
             },
         )
         # update/set provider_mappings table
         await self._set_provider_mappings(db_id, provider_mappings, overwrite)
         self.logger.debug("updated %s in database: (id %s)", update.name, db_id)
-
-    async def _get_provider_audiobook_chapters(
-        self, item_id: str, provider_instance_id_or_domain: str
-    ) -> list[Chapter]:
-        """Return audiobook chapters for the given provider audiobook id."""
-        prov: MusicProvider = self.mass.get_provider(provider_instance_id_or_domain)
-        if prov is None:
-            return []
-        # grab the chapters from the provider
-        # note that we do not cache any of this because its
-        # always a rather small list and we want fresh resume info
-        items = await prov.get_audiobook_chapters(item_id)
-
-        async def set_resume_position(chapter: Chapter) -> None:
-            if chapter.fully_played is not None or chapter.resume_position_ms:
-                return
-            # TODO: inject resume position info here for providers that do not natively provide it
-            resume_info_db_row = await self.mass.music.database.get_row(
-                DB_TABLE_PLAYLOG,
-                {
-                    "item_id": chapter.item_id,
-                    "provider": prov.lookup_key,
-                    "media_type": MediaType.CHAPTER,
-                },
-            )
-            if resume_info_db_row is None:
-                return
-            if resume_info_db_row["seconds_played"]:
-                chapter.resume_position_ms = int(resume_info_db_row["seconds_played"] * 1000)
-            if resume_info_db_row["fully_played"] is not None:
-                chapter.fully_played = resume_info_db_row["fully_played"]
-
-        await asyncio.gather(*[set_resume_position(chapter) for chapter in items])
-        return items
 
     async def radio_mode_base_tracks(
         self,

@@ -30,11 +30,11 @@ from music_assistant_models.media_items import (
     Album,
     Artist,
     AudioFormat,
-    Episode,
     ItemMapping,
     MediaItemImage,
     Playlist,
     Podcast,
+    PodcastEpisode,
     ProviderMapping,
     SearchResults,
     Track,
@@ -440,7 +440,9 @@ class OpenSonicProvider(MusicProvider):
 
         return podcast
 
-    def _parse_epsiode(self, sonic_episode: SonicEpisode, sonic_channel: SonicPodcast) -> Episode:
+    def _parse_epsiode(
+        self, sonic_episode: SonicEpisode, sonic_channel: SonicPodcast
+    ) -> PodcastEpisode:
         eid = f"{sonic_episode.channel_id}{EP_CHAN_SEP}{sonic_episode.id}"
         pos = 1
         for ep in sonic_channel.episodes:
@@ -448,7 +450,7 @@ class OpenSonicProvider(MusicProvider):
                 break
             pos += 1
 
-        episode = Episode(
+        episode = PodcastEpisode(
             item_id=eid,
             provider=self.domain,
             name=sonic_episode.title,
@@ -701,10 +703,19 @@ class OpenSonicProvider(MusicProvider):
             raise MediaNotFoundError(msg) from e
         return self._parse_playlist(sonic_playlist)
 
+    async def get_podcast_episode(self, prov_episode_id: str) -> PodcastEpisode:
+        """Get (full) podcast episode details by id."""
+        podcast_id, _ = prov_episode_id.split(EP_CHAN_SEP)
+        for episode in await self.get_podcast_episodes(podcast_id):
+            if episode.item_id == prov_episode_id:
+                return episode
+        msg = f"Episode {prov_episode_id} not found"
+        raise MediaNotFoundError(msg)
+
     async def get_podcast_episodes(
         self,
         prov_podcast_id: str,
-    ) -> list[Episode]:
+    ) -> list[PodcastEpisode]:
         """Get all Episodes for given podcast id."""
         if not self._enable_podcasts:
             return []
@@ -843,7 +854,7 @@ class OpenSonicProvider(MusicProvider):
             )
 
             self.mass.create_task(self._report_playback_started(item_id))
-        elif media_type == MediaType.EPISODE:
+        elif media_type == MediaType.PODCAST_EPISODE:
             item: SonicEpisode = await self._get_podcast_episode(item_id)
 
             self.logger.debug(
