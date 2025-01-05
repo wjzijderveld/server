@@ -713,11 +713,8 @@ class PlayerQueuesController(CoreController):
         queue_player: Player = self.mass.players.get(queue_id, True)
         if not queue.current_item:
             raise InvalidCommand(f"Queue {queue_player.display_name} has no item(s) loaded.")
-        if (
-            queue.current_item.media_item.media_type != MediaType.TRACK
-            or not queue.current_item.duration
-        ):
-            raise InvalidCommand("Can not seek on non track items.")
+        if not queue.current_item.duration:
+            raise InvalidCommand("Can not seek items without duration.")
         position = max(0, int(position))
         if position > queue.current_item.duration:
             raise InvalidCommand("Can not seek outside of duration range.")
