@@ -86,6 +86,8 @@ async def get_config_entries(
 class PodcastMusicprovider(MusicProvider):
     """Podcast RSS Feed Music Provider."""
 
+    parsed: dict | None = None
+
     @property
     def supported_features(self) -> set[ProviderFeature]:
         """Return the features supported by this Provider."""
