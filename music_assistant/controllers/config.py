@@ -583,7 +583,8 @@ class ConfigController:
             await self.get_core_config(core_controller)
             if include_values
             else CoreConfig.parse(
-                [], self.get(f"{CONF_CORE}/{core_controller}", {"domain": core_controller})
+                [],
+                self.get(f"{CONF_CORE}/{core_controller}", {"domain": core_controller}),
             )
             for core_controller in CONFIGURABLE_CORE_CONTROLLERS
         ]
@@ -678,7 +679,11 @@ class ConfigController:
         )
 
     def set_raw_provider_config_value(
-        self, provider_instance: str, key: str, value: ConfigValueType, encrypted: bool = False
+        self,
+        provider_instance: str,
+        key: str,
+        value: ConfigValueType,
+        encrypted: bool = False,
     ) -> None:
         """
         Set (raw) single config(entry) value for a provider.
@@ -894,7 +899,7 @@ class ConfigController:
                 "type": manifest.type.value,
                 "domain": manifest.domain,
                 "instance_id": instance_id,
-                "name": manifest.name,
+                "default_name": manifest.name,
                 "values": values,
             },
         )

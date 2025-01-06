@@ -244,7 +244,7 @@ class PodcastsController(MediaControllerBase[Podcast]):
             if resume_info_db_row["fully_played"] is not None:
                 episode.fully_played = resume_info_db_row["fully_played"]
 
-        await asyncio.gather(*[set_resume_position(chapter) for chapter in items])
+        await asyncio.gather(*[set_resume_position(x) for x in items])
         return items
 
     async def radio_mode_base_tracks(
