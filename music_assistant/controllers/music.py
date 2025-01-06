@@ -986,6 +986,8 @@ class MusicController(CoreController):
             self.mass.music.tracks,
             self.mass.music.albums,
             self.mass.music.artists,
+            self.mass.music.podcasts,
+            self.mass.music.audiobooks,
             # run main controllers twice to rule out relations
             self.mass.music.tracks,
             self.mass.music.albums,
