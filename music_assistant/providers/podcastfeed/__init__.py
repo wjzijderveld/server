@@ -96,7 +96,7 @@ class PodcastMusicprovider(MusicProvider):
         """Handle async initialization of the provider."""
         # ruff: noqa: S310
         feed_url = podcastparser.normalize_feed_url(self.config.get_value(CONF_FEED_URL))
-        self.podcast_id = hash(feed_url)
+        self.podcast_id = str(hash(feed_url))
         async with self.mass.http_session.get(feed_url) as response:
             if response.status == 200:
                 feed_data = await response.read()
@@ -120,6 +120,14 @@ class PodcastMusicprovider(MusicProvider):
         """
         return False
 
+    @property
+    def name(self) -> str:
+        """Return (custom) friendly name for this provider instance."""
+        if self.parsed:
+            postfix = self.parsed["title"]
+            return f"{self.manifest.name}: {postfix}"
+        return super().name
+
     async def get_library_podcasts(self) -> AsyncGenerator[Podcast, None]:
         """Retrieve library/subscribed podcasts from the provider."""
         """
@@ -130,17 +138,16 @@ class PodcastMusicprovider(MusicProvider):
 
     async def get_podcast(self, prov_podcast_id: str) -> Podcast:
         """Get full artist details by id."""
-        if prov_podcast_id in self.podcast_id:
-            return await self._parse_podcast()
-        else:
+        if prov_podcast_id != self.podcast_id:
             raise Exception(f"Podcast id not in provider: {prov_podcast_id}")
+        return await self._parse_podcast()
 
     async def get_podcast_episode(self, prov_episode_id: str) -> PodcastEpisode:
         """Get (full) podcast episode details by id."""
-        for episode in self.parsed["episodes"]:
+        for idx, episode in enumerate(self.parsed["episodes"]):
             if prov_episode_id == episode["guid"]:
-                return await self._parse_episode(episode)
-        raise MediaNotFoundError("Track not found")
+                return await self._parse_episode(episode, idx)
+        raise MediaNotFoundError("Episode not found")
 
     async def get_podcast_episodes(
         self,
@@ -148,8 +155,10 @@ class PodcastMusicprovider(MusicProvider):
     ) -> list[PodcastEpisode]:
         """List all episodes for the podcast."""
         episodes = []
-        for episode in self.parsed["episodes"]:
-            episodes.append(await self._parse_episode(episode))
+        if prov_podcast_id != self.podcast_id:
+            raise Exception(f"Podcast id not in provider: {prov_podcast_id}")
+        for idx, episode in enumerate(self.parsed["episodes"]):
+            episodes.append(await self._parse_episode(episode, idx))
         return episodes
 
     async def get_stream_details(
@@ -206,7 +215,7 @@ class PodcastMusicprovider(MusicProvider):
 
         return podcast
 
-    async def _parse_episode(self, episode_obj: dict) -> PodcastEpisode:
+    async def _parse_episode(self, episode_obj: dict, fallback_position: int) -> PodcastEpisode:
         name = episode_obj["title"]
         item_id = episode_obj["guid"]
         episode = PodcastEpisode(
@@ -214,7 +223,7 @@ class PodcastMusicprovider(MusicProvider):
             provider=self.domain,
             name=name,
             duration=episode_obj["total_time"],
-            position=episode_obj["number"],
+            position=episode_obj.get("number", fallback_position),
             podcast=ItemMapping(
                 item_id=self.podcast_id,
                 provider=self.instance_id,
