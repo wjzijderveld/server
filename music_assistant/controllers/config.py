@@ -291,7 +291,7 @@ class ConfigController:
             msg = f"Builtin provider {prov_manifest.name} can not be removed."
             raise RuntimeError(msg)
         self.remove(conf_key)
-        await self.mass.unload_provider(instance_id)
+        await self.mass.unload_provider(instance_id, True)
         if existing["type"] == "music":
             # cleanup entries in library
             await self.mass.music.cleanup_provider(instance_id)

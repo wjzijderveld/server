@@ -167,11 +167,12 @@ class MyDemoMusicprovider(MusicProvider):
         # relevant or leave out completely if not needed.
         # In most cases this can be omitted for music providers.
 
-    async def unload(self) -> None:
+    async def unload(self, is_removed: bool = False) -> None:
         """
         Handle unload/close of the provider.
 
         Called when provider is deregistered (e.g. MA exiting or config reloading).
+        is_removed will be set to True when the provider is removed from the configuration.
         """
         # OPTIONAL
         # This is an optional method that you can implement if

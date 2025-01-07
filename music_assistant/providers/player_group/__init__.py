@@ -202,7 +202,7 @@ class PlayerGroupProvider(PlayerProvider):
             self.mass.subscribe(self._on_mass_player_added_event, EventType.PLAYER_ADDED)
         )
 
-    async def unload(self) -> None:
+    async def unload(self, is_removed: bool = False) -> None:
         """
         Handle unload/close of the provider.
 

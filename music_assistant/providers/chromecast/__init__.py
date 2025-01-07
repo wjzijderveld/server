@@ -153,7 +153,7 @@ class ChromecastProvider(PlayerProvider):
         # start discovery in executor
         await self.mass.loop.run_in_executor(None, self.browser.start_discovery)
 
-    async def unload(self) -> None:
+    async def unload(self, is_removed: bool = False) -> None:
         """Handle close/cleanup of the provider."""
         if not self.browser:
             return
