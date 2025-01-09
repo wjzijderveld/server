@@ -306,8 +306,8 @@ class AirplayProvider(PlayerProvider):
             # special case: UGP stream
             ugp_provider = cast(PlayerGroupProvider, self.mass.get_provider("player_group"))
             ugp_stream = ugp_provider.ugp_streams[media.queue_id]
-            input_format = ugp_stream.output_format
-            audio_source = ugp_stream.subscribe()
+            input_format = ugp_stream.base_pcm_format
+            audio_source = ugp_stream.subscribe_raw()
         elif media.queue_id and media.queue_item_id:
             # regular queue (flow) stream request
             input_format = AIRPLAY_FLOW_PCM_FORMAT
@@ -528,6 +528,7 @@ class AirplayProvider(PlayerProvider):
             supported_features={
                 PlayerFeature.PAUSE,
                 PlayerFeature.SET_MEMBERS,
+                PlayerFeature.MULTI_DEVICE_DSP,
                 PlayerFeature.VOLUME_SET,
             },
             volume_level=volume,
