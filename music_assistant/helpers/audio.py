@@ -46,7 +46,7 @@ from .dsp import filter_to_ffmpeg_params
 from .ffmpeg import FFMpeg, get_ffmpeg_stream
 from .playlists import IsHLSPlaylist, PlaylistItem, fetch_playlist, parse_m3u
 from .process import AsyncProcess, check_output, communicate
-from .util import create_tempfile, detect_charset
+from .util import TimedAsyncGenerator, create_tempfile, detect_charset
 
 if TYPE_CHECKING:
     from music_assistant_models.config_entries import CoreConfig, PlayerConfig
@@ -124,7 +124,8 @@ async def crossfade_pcm_parts(
         return crossfaded_audio
     # no crossfade_data, return original data instead
     LOGGER.debug(
-        "crossfade of pcm chunks failed: not enough data? " "fade_in_part: %s - fade_out_part: %s",
+        "crossfade of pcm chunks failed: not enough data? "
+        "- fade_in_part: %s - fade_out_part: %s",
         len(fade_in_part),
         len(fade_out_part),
     )
@@ -287,7 +288,7 @@ async def get_media_stream(
 ) -> AsyncGenerator[bytes, None]:
     """Get PCM audio stream for given media details."""
     logger = LOGGER.getChild("media_stream")
-    logger.debug("start media stream for: %s", streamdetails.uri)
+    logger.log(VERBOSE_LOG_LEVEL, "Starting media stream for %s", streamdetails.uri)
     strip_silence_begin = streamdetails.strip_silence_begin
     strip_silence_end = streamdetails.strip_silence_end
     if streamdetails.fade_in:
@@ -297,7 +298,6 @@ async def get_media_stream(
     chunk_number = 0
     buffer: bytes = b""
     finished = False
-
     ffmpeg_proc = FFMpeg(
         audio_input=audio_source,
         input_format=streamdetails.audio_format,
@@ -305,10 +305,25 @@ async def get_media_stream(
         filter_params=filter_params,
         extra_input_args=extra_input_args,
         collect_log_history=True,
+        loglevel="debug" if LOGGER.isEnabledFor(VERBOSE_LOG_LEVEL) else "info",
     )
     try:
         await ffmpeg_proc.start()
-        async for chunk in ffmpeg_proc.iter_chunked(pcm_format.pcm_sample_size):
+        logger.debug(
+            "Started media stream for %s"
+            " - using streamtype: %s "
+            " - volume normalization: %s"
+            " - pcm format: %s"
+            " - ffmpeg PID: %s",
+            streamdetails.uri,
+            streamdetails.stream_type,
+            streamdetails.volume_normalization_mode,
+            pcm_format.content_type.value,
+            ffmpeg_proc.proc.pid,
+        )
+        async for chunk in TimedAsyncGenerator(
+            ffmpeg_proc.iter_chunked(pcm_format.pcm_sample_size), timeout=30
+        ):
             # for radio streams we just yield all chunks directly
             if streamdetails.media_type == MediaType.RADIO:
                 yield chunk
@@ -349,6 +364,7 @@ async def get_media_stream(
                 buffer = buffer[pcm_format.pcm_sample_size :]
 
         # end of audio/track reached
+        logger.log(VERBOSE_LOG_LEVEL, "End of stream reached.")
         if strip_silence_end and buffer:
             # strip silence from end of audio
             buffer = await strip_silence(
@@ -364,6 +380,7 @@ async def get_media_stream(
         finished = True
 
     finally:
+        logger.log(VERBOSE_LOG_LEVEL, "Closing ffmpeg...")
         await ffmpeg_proc.close()
 
         if bytes_sent == 0:
@@ -387,15 +404,17 @@ async def get_media_stream(
         if finished and not streamdetails.seek_position and seconds_streamed:
             streamdetails.duration = seconds_streamed
 
-        # parse loudnorm data if we have that collected
+        # parse loudnorm data if we have that collected (and enabled)
         if (
-            streamdetails.loudness is None
-            and streamdetails.volume_normalization_mode != VolumeNormalizationMode.DISABLED
+            (streamdetails.loudness is None or finished)
+            and streamdetails.volume_normalization_mode
+            in (VolumeNormalizationMode.DYNAMIC, VolumeNormalizationMode.FALLBACK_DYNAMIC)
             and (finished or (seconds_streamed >= 300))
         ):
             # if dynamic volume normalization is enabled and the entire track is streamed
             # the loudnorm filter will output the measuremeet in the log,
             # so we can use those directly instead of analyzing the audio
+            logger.log(VERBOSE_LOG_LEVEL, "Collecting loudness measurement...")
             if loudness_details := parse_loudnorm(" ".join(ffmpeg_proc.log_history)):
                 logger.debug(
                     "Loudness measurement for %s: %s dB",
@@ -882,16 +901,16 @@ def get_player_filter_params(
 def parse_loudnorm(raw_stderr: bytes | str) -> float | None:
     """Parse Loudness measurement from ffmpeg stderr output."""
     stderr_data = raw_stderr.decode() if isinstance(raw_stderr, bytes) else raw_stderr
-    if "[Parsed_loudnorm_" not in stderr_data:
+    if "[Parsed_loudnorm_0 @" not in stderr_data:
         return None
-    stderr_data = stderr_data.split("[Parsed_loudnorm_")[1]
-    stderr_data = "{" + stderr_data.rsplit("{")[-1].strip()
-    stderr_data = stderr_data.rsplit("}")[0].strip() + "}"
-    try:
-        loudness_data = json_loads(stderr_data)
-    except JSON_DECODE_EXCEPTIONS:
-        return None
-    return float(loudness_data["input_i"])
+    for jsun_chunk in stderr_data.split(" { "):
+        try:
+            stderr_data = "{" + jsun_chunk.rsplit("}")[0].strip() + "}"
+            loudness_data = json_loads(stderr_data)
+            return float(loudness_data["input_i"])
+        except (*JSON_DECODE_EXCEPTIONS, KeyError, ValueError, IndexError):
+            continue
+    return None
 
 
 async def analyze_loudness(
