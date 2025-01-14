@@ -1013,25 +1013,20 @@ class PlayerQueuesController(CoreController):
             and (prev_item := self.get_item(queue_id, prev_item_id))
             and (stream_details := prev_item.streamdetails)
         ):
-            seconds_played = int(prev_state["elapsed_time"])
-            fully_played = seconds_played >= (stream_details.duration or 3600) - 5
+            position = int(prev_state["elapsed_time"])
+            seconds_played = position - stream_details.seek_position
+            fully_played = position >= (stream_details.duration or 3600) - 5
             self.logger.debug(
                 "PlayerQueue %s played item %s for %s seconds",
                 queue.display_name,
                 prev_item.uri,
                 seconds_played,
             )
-            if music_prov := self.mass.get_provider(stream_details.provider):
-                self.mass.create_task(
-                    music_prov.on_streamed(stream_details, seconds_played, fully_played)
-                )
             if prev_item.media_item and (fully_played or seconds_played > 10):
                 # add entry to playlog - this also handles resume of podcasts/audiobooks
                 self.mass.create_task(
                     self.mass.music.mark_item_played(
-                        stream_details.media_type,
-                        stream_details.item_id,
-                        stream_details.provider,
+                        prev_item.media_item,
                         fully_played=fully_played,
                         seconds_played=seconds_played,
                     )
@@ -1557,36 +1552,20 @@ class PlayerQueuesController(CoreController):
     ) -> list[MediaItemType]:
         """Resolve/unwrap media items to enqueue."""
         if media_item.media_type == MediaType.PLAYLIST:
-            self.mass.create_task(
-                self.mass.music.mark_item_played(
-                    media_item.media_type, media_item.item_id, media_item.provider
-                )
-            )
+            self.mass.create_task(self.mass.music.mark_item_played(media_item))
             return await self.get_playlist_tracks(media_item, start_item)
         if media_item.media_type == MediaType.ARTIST:
-            self.mass.create_task(
-                self.mass.music.mark_item_played(
-                    media_item.media_type, media_item.item_id, media_item.provider
-                )
-            )
+            self.mass.create_task(self.mass.music.mark_item_played(media_item))
             return await self.get_artist_tracks(media_item)
         if media_item.media_type == MediaType.ALBUM:
-            self.mass.create_task(
-                self.mass.music.mark_item_played(
-                    media_item.media_type, media_item.item_id, media_item.provider
-                )
-            )
+            self.mass.create_task(self.mass.music.mark_item_played(media_item))
             return await self.get_album_tracks(media_item, start_item)
         if media_item.media_type == MediaType.AUDIOBOOK:
             if resume_point := await self.get_audiobook_resume_point(media_item, start_item):
                 media_item.resume_position_ms = resume_point
             return [media_item]
         if media_item.media_type == MediaType.PODCAST:
-            self.mass.create_task(
-                self.mass.music.mark_item_played(
-                    media_item.media_type, media_item.item_id, media_item.provider
-                )
-            )
+            self.mass.create_task(self.mass.music.mark_item_played(media_item))
             return await self.get_next_podcast_episodes(media_item, start_item or media_item)
         if media_item.media_type == MediaType.PODCAST_EPISODE:
             return await self.get_next_podcast_episodes(None, media_item)

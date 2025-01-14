@@ -436,6 +436,12 @@ async def get_media_stream(
                 task_id = f"analyze_loudness_{streamdetails.uri}"
                 mass.create_task(analyze_loudness, mass, streamdetails, task_id=task_id)
 
+        # report stream to provider
+        if (finished or seconds_streamed >= 30) and (
+            music_prov := mass.get_provider(streamdetails.provider)
+        ):
+            mass.create_task(music_prov.on_streamed(streamdetails))
+
 
 def create_wave_header(samplerate=44100, channels=2, bitspersample=16, duration=None):
     """Generate a wave header from given params."""

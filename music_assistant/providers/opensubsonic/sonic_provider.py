@@ -786,17 +786,28 @@ class OpenSonicProvider(MusicProvider):
         self.logger.debug("scrobble for now playing called for %s", item_id)
         await self._run_async(self._conn.scrobble, sid=item_id, submission=False)
 
-    async def on_streamed(
+    async def on_played(
         self,
-        streamdetails: StreamDetails,
-        seconds_streamed: int,
-        fully_played: bool = False,
+        media_type: MediaType,
+        item_id: str,
+        fully_played: bool,
+        position: int,
     ) -> None:
-        """Handle callback when an item completed streaming."""
-        self.logger.debug("on_streamed called for %s", streamdetails.item_id)
-        if streamdetails.duration and seconds_streamed >= streamdetails.duration / 2:
-            self.logger.debug("scrobble for listen count called for %s", streamdetails.item_id)
-            await self._run_async(self._conn.scrobble, sid=streamdetails.item_id, submission=True)
+        """
+        Handle callback when a (playable) media item has been played.
+
+        This is called by the Queue controller when;
+            - a track has been fully played
+            - a track has been skipped
+            - a track has been stopped after being played
+
+        Fully played is True when the track has been played to the end.
+        Position is the last known position of the track in seconds, to sync resume state.
+        When fully_played is set to false and position is 0,
+        the user marked the item as unplayed in the UI.
+        """
+        self.logger.debug("scrobble for listen count called for %s", item_id)
+        await self._run_async(self._conn.scrobble, sid=item_id, submission=True)
 
     async def get_audio_stream(
         self, streamdetails: StreamDetails, seek_position: int = 0
