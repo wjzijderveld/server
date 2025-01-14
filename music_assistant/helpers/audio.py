@@ -264,10 +264,10 @@ async def get_stream_details(
     streamdetails.prefer_album_loudness = prefer_album_loudness
     player_settings = await mass.config.get_player_config(streamdetails.queue_id)
     core_config = await mass.config.get_core_config("streams")
+    streamdetails.target_loudness = player_settings.get_value(CONF_VOLUME_NORMALIZATION_TARGET)
     streamdetails.volume_normalization_mode = _get_normalization_mode(
         core_config, player_settings, streamdetails
     )
-    streamdetails.target_loudness = player_settings.get_value(CONF_VOLUME_NORMALIZATION_TARGET)
 
     process_time = int((time.time() - time_start) * 1000)
     LOGGER.debug(
@@ -311,7 +311,7 @@ async def get_media_stream(
         await ffmpeg_proc.start()
         logger.debug(
             "Started media stream for %s"
-            " - using streamtype: %s "
+            " - using streamtype: %s"
             " - volume normalization: %s"
             " - pcm format: %s"
             " - ffmpeg PID: %s",
@@ -993,6 +993,9 @@ def _get_normalization_mode(
     if not player_config.get_value(CONF_VOLUME_NORMALIZATION):
         # disabled for this player
         return VolumeNormalizationMode.DISABLED
+    if streamdetails.target_loudness is None:
+        # no target loudness set, disable normalization
+        return VolumeNormalizationMode.DISABLED
     # work out preference for track or radio
     preference = VolumeNormalizationMode(
         core_config.get_value(
@@ -1013,6 +1016,13 @@ def _get_normalization_mode(
     # handle no measurement available and fallback to fixed gain is allowed
     if streamdetails.loudness is None and preference == VolumeNormalizationMode.FALLBACK_FIXED_GAIN:
         return VolumeNormalizationMode.FIXED_GAIN
+
+    # handle measurement available - chosen mode is measurement
+    if streamdetails.loudness and preference not in (
+        VolumeNormalizationMode.DISABLED,
+        VolumeNormalizationMode.FIXED_GAIN,
+    ):
+        return VolumeNormalizationMode.MEASUREMENT_ONLY
 
     # simply return the preference
     return preference
