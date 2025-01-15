@@ -432,11 +432,14 @@ async def get_media_stream(
                         media_type=streamdetails.media_type,
                     )
                 )
-            else:
-                # no data from loudnorm filter found, we need to analyze the audio
-                # add background task to start analyzing the audio
-                task_id = f"analyze_loudness_{streamdetails.uri}"
-                mass.create_task(analyze_loudness, mass, streamdetails, task_id=task_id)
+        elif streamdetails.loudness is None and streamdetails.volume_normalization_mode not in (
+            VolumeNormalizationMode.DISABLED,
+            VolumeNormalizationMode.FIXED_GAIN,
+        ):
+            # dynamic mode not allowed and no measurement known, we need to analyze the audio
+            # add background task to start analyzing the audio
+            task_id = f"analyze_loudness_{streamdetails.uri}"
+            mass.call_later(5, analyze_loudness, mass, streamdetails, task_id=task_id)
 
         # report stream to provider
         if (finished or seconds_streamed >= 30) and (
@@ -965,6 +968,7 @@ async def analyze_loudness(
         filter_params=["ebur128=framelog=verbose"],
         extra_input_args=extra_input_args,
         collect_log_history=True,
+        loglevel="info",
     ) as ffmpeg_proc:
         await ffmpeg_proc.wait()
         log_lines = ffmpeg_proc.log_history
