@@ -410,12 +410,11 @@ async def get_media_stream(
         # parse loudnorm data if we have that collected (and enabled)
         if (
             (streamdetails.loudness is None or finished)
-            and streamdetails.volume_normalization_mode
-            in (VolumeNormalizationMode.DYNAMIC, VolumeNormalizationMode.FALLBACK_DYNAMIC)
+            and streamdetails.volume_normalization_mode == VolumeNormalizationMode.DYNAMIC
             and (finished or (seconds_streamed >= 300))
         ):
             # if dynamic volume normalization is enabled and the entire track is streamed
-            # the loudnorm filter will output the measuremeet in the log,
+            # the loudnorm filter will output the measurement in the log,
             # so we can use those directly instead of analyzing the audio
             logger.log(VERBOSE_LOG_LEVEL, "Collecting loudness measurement...")
             if loudness_details := parse_loudnorm(" ".join(ffmpeg_proc.log_history)):

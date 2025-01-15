@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 # type: ignore
 """Events module for Spotify Connect."""
 
