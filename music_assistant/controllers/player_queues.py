@@ -1048,7 +1048,9 @@ class PlayerQueuesController(CoreController):
                             else None,
                             "image_url": self.mass.metadata.get_image_url(
                                 prev_item.media_item.image, size=512
-                            ),
+                            )
+                            if prev_item.media_item.image
+                            else None,
                             "duration": getattr(prev_item.media_item, "duration", 0),
                             "mbid": getattr(prev_item.media_item, "mbid", None),
                         },

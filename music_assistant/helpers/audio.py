@@ -325,8 +325,8 @@ async def get_media_stream(
         async for chunk in TimedAsyncGenerator(
             ffmpeg_proc.iter_chunked(pcm_format.pcm_sample_size), timeout=30
         ):
-            # for radio streams we just yield all chunks directly
-            if streamdetails.media_type == MediaType.RADIO:
+            # for non-tracks we just yield all chunks directly
+            if streamdetails.media_type != MediaType.TRACK:
                 yield chunk
                 bytes_sent += len(chunk)
                 continue
