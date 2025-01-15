@@ -1014,7 +1014,7 @@ class PlayerQueuesController(CoreController):
             and (stream_details := prev_item.streamdetails)
         ):
             position = int(prev_state["elapsed_time"])
-            seconds_played = position - stream_details.seek_position
+            seconds_played = int(prev_state["elapsed_time"]) - stream_details.seek_position
             fully_played = position >= (stream_details.duration or 3600) - 5
             self.logger.debug(
                 "PlayerQueue %s played item %s for %s seconds",
@@ -1037,7 +1037,21 @@ class PlayerQueuesController(CoreController):
                     EventType.MEDIA_ITEM_PLAYED,
                     object_id=prev_item.media_item.uri,
                     data={
-                        "media_item": prev_item.media_item.uri,
+                        # TODO: Maybe we should create a dataclass for this as well?!
+                        "media_item": {
+                            "uri": prev_item.media_item.uri,
+                            "name": prev_item.media_item.name,
+                            "media_type": prev_item.media_item.media_type,
+                            "artist": getattr(prev_item.media_item, "artist_str", None),
+                            "album": album.name
+                            if (album := getattr(prev_item.media_item, "album", None))
+                            else None,
+                            "image_url": self.mass.metadata.get_image_url(
+                                prev_item.media_item.image, size=512
+                            ),
+                            "duration": getattr(prev_item.media_item, "duration", 0),
+                            "mbid": getattr(prev_item.media_item, "mbid", None),
+                        },
                         "seconds_played": seconds_played,
                         "fully_played": fully_played,
                     },
