@@ -22,6 +22,7 @@ from music_assistant_models.enums import (
     VolumeNormalizationMode,
 )
 from music_assistant_models.errors import (
+    AudioError,
     InvalidDataError,
     MediaNotFoundError,
     MusicAssistantError,
@@ -364,6 +365,10 @@ async def get_media_stream(
                 buffer = buffer[pcm_format.pcm_sample_size :]
 
         # end of audio/track reached
+        if bytes_sent == 0:
+            # edge case: no audio data was sent
+            raise AudioError("No audio was received")
+
         logger.log(VERBOSE_LOG_LEVEL, "End of stream reached.")
         if strip_silence_end and buffer:
             # strip silence from end of audio
@@ -378,27 +383,25 @@ async def get_media_stream(
         yield buffer
         del buffer
         finished = True
-
+    except Exception as err:
+        if isinstance(err, asyncio.CancelledError):
+            # we were cancelled, just raise
+            raise
+        logger.error("Error while streaming %s: %s", streamdetails.uri, err)
+        streamdetails.stream_error = True
     finally:
         logger.log(VERBOSE_LOG_LEVEL, "Closing ffmpeg...")
         await ffmpeg_proc.close()
 
-        if bytes_sent == 0:
-            # edge case: no audio data was sent
-            streamdetails.stream_error = True
-            seconds_streamed = 0
-            logger.warning("Stream error on %s", streamdetails.uri)
-        else:
-            # try to determine how many seconds we've streamed
-            seconds_streamed = bytes_sent / pcm_format.pcm_sample_size if bytes_sent else 0
-            logger.debug(
-                "stream %s (with code %s) for %s - seconds streamed: %s",
-                "finished" if finished else "aborted",
-                ffmpeg_proc.returncode,
-                streamdetails.uri,
-                seconds_streamed,
-            )
-
+        # try to determine how many seconds we've streamed
+        seconds_streamed = bytes_sent / pcm_format.pcm_sample_size if bytes_sent else 0
+        logger.debug(
+            "stream %s (with code %s) for %s - seconds streamed: %s",
+            "finished" if finished else "aborted",
+            ffmpeg_proc.returncode,
+            streamdetails.uri,
+            seconds_streamed,
+        )
         streamdetails.seconds_streamed = seconds_streamed
         # store accurate duration
         if finished and not streamdetails.seek_position and seconds_streamed:

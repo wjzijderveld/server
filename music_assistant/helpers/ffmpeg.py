@@ -141,12 +141,13 @@ class FFMpeg(AsyncProcess):
             generator_exhausted = True
         except Exception as err:
             cancelled = isinstance(err, asyncio.CancelledError)
-            if not cancelled:
-                self.logger.error(
-                    "Stream error: %s",
-                    str(err) or err.__class__.__name__,
-                    exc_info=err if self.logger.isEnabledFor(VERBOSE_LOG_LEVEL) else None,
-                )
+            if cancelled:
+                raise
+            self.logger.error(
+                "Stream error: %s",
+                str(err) or err.__class__.__name__,
+                exc_info=err if self.logger.isEnabledFor(VERBOSE_LOG_LEVEL) else None,
+            )
         finally:
             if not cancelled:
                 await self.write_eof()

@@ -1204,7 +1204,7 @@ class PlayerQueuesController(CoreController):
             return
         # enqueue next track on the player if we're not in flow mode
         task_id = f"enqueue_next_item_{queue_id}"
-        self.mass.call_later(5, self._enqueue_next_item, queue_id, item_id, task_id=task_id)
+        self.mass.call_later(2, self._enqueue_next_item, queue_id, item_id, task_id=task_id)
 
     # Main queue manipulation methods
 
