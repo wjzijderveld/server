@@ -7,15 +7,15 @@ import logging
 import time
 from collections import deque
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from music_assistant_models.enums import ContentType
 from music_assistant_models.errors import AudioError
-from music_assistant_models.helpers import get_global_cache_value
+from music_assistant_models.helpers import get_global_cache_value, set_global_cache_values
 
 from music_assistant.constants import VERBOSE_LOG_LEVEL
 
-from .process import AsyncProcess
+from .process import AsyncProcess, check_output
 from .util import TimedAsyncGenerator, close_async_generator
 
 if TYPE_CHECKING:
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 LOGGER = logging.getLogger("ffmpeg")
 MINIMAL_FFMPEG_VERSION = 6
+CACHE_ATTR_LIBSOXR_PRESENT: Final[str] = "libsoxr_present"
 
 
 class FFMpeg(AsyncProcess):
@@ -186,7 +187,7 @@ async def get_ffmpeg_stream(
             yield chunk
 
 
-def get_ffmpeg_args(  # noqa: PLR0915
+def get_ffmpeg_args(
     input_format: AudioFormat,
     output_format: AudioFormat,
     filter_params: list[str],
@@ -199,24 +200,6 @@ def get_ffmpeg_args(  # noqa: PLR0915
     """Collect all args to send to the ffmpeg process."""
     if extra_args is None:
         extra_args = []
-    ffmpeg_present, libsoxr_support, version = get_global_cache_value("ffmpeg_support")
-    if not ffmpeg_present:
-        msg = (
-            "FFmpeg binary is missing from system."
-            "Please install ffmpeg on your OS to enable playback."
-        )
-        raise AudioError(
-            msg,
-        )
-
-    major_version = int("".join(char for char in version.split(".")[0] if not char.isalpha()))
-    if major_version < MINIMAL_FFMPEG_VERSION:
-        msg = (
-            f"FFmpeg version {version} is not supported. "
-            f"Minimal version required is {MINIMAL_FFMPEG_VERSION}."
-        )
-        raise AudioError(msg)
-
     # generic args
     generic_args = [
         "ffmpeg",
@@ -311,8 +294,9 @@ def get_ffmpeg_args(  # noqa: PLR0915
         input_format.sample_rate != output_format.sample_rate
         or input_format.bit_depth > output_format.bit_depth
     ):
-        # prefer resampling with libsoxr due to its high quality (if its available)
-        # but skip libsoxr if loudnorm filter is present, due to this bug:
+        libsoxr_support = get_global_cache_value(CACHE_ATTR_LIBSOXR_PRESENT)
+        # prefer resampling with libsoxr due to its high quality
+        # but skip if loudnorm filter is present, due to this bug:
         # https://trac.ffmpeg.org/ticket/11323
         loudnorm_present = any("loudnorm" in f for f in filter_params)
         if libsoxr_support and not loudnorm_present:
@@ -334,3 +318,38 @@ def get_ffmpeg_args(  # noqa: PLR0915
         extra_args += ["-af", ",".join(filter_params)]
 
     return generic_args + input_args + extra_args + output_args
+
+
+async def check_ffmpeg_version() -> None:
+    """Check if ffmpeg is present (with libsoxr support)."""
+    # check for FFmpeg presence
+    returncode, output = await check_output("ffmpeg", "-version")
+    ffmpeg_present = returncode == 0 and "FFmpeg" in output.decode()
+
+    # use globals as in-memory cache
+    version = output.decode().split("ffmpeg version ")[1].split(" ")[0].split("-")[0]
+    libsoxr_support = "enable-libsoxr" in output.decode()
+    await set_global_cache_values({CACHE_ATTR_LIBSOXR_PRESENT: libsoxr_support})
+
+    if not ffmpeg_present:
+        msg = (
+            "FFmpeg binary is missing from system."
+            "Please install ffmpeg on your OS to enable playback."
+        )
+        raise AudioError(
+            msg,
+        )
+
+    major_version = int("".join(char for char in version.split(".")[0] if not char.isalpha()))
+    if major_version < MINIMAL_FFMPEG_VERSION:
+        msg = (
+            f"FFmpeg version {version} is not supported. "
+            f"Minimal version required is {MINIMAL_FFMPEG_VERSION}."
+        )
+        raise AudioError(msg)
+
+    LOGGER.info(
+        "Detected ffmpeg version %s %s",
+        version,
+        "with libsoxr support" if libsoxr_support else "",
+    )

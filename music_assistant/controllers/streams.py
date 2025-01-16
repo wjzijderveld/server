@@ -50,7 +50,6 @@ from music_assistant.constants import (
 )
 from music_assistant.helpers.audio import LOGGER as AUDIO_LOGGER
 from music_assistant.helpers.audio import (
-    check_audio_support,
     crossfade_pcm_parts,
     get_chunksize,
     get_hls_substream,
@@ -61,7 +60,7 @@ from music_assistant.helpers.audio import (
     get_stream_details,
 )
 from music_assistant.helpers.ffmpeg import LOGGER as FFMPEG_LOGGER
-from music_assistant.helpers.ffmpeg import get_ffmpeg_stream
+from music_assistant.helpers.ffmpeg import check_ffmpeg_version, get_ffmpeg_stream
 from music_assistant.helpers.util import get_ip, get_ips, select_free_port, try_parse_bool
 from music_assistant.helpers.webserver import Webserver
 from music_assistant.models.core_controller import CoreController
@@ -216,25 +215,11 @@ class StreamsController(CoreController):
 
     async def setup(self, config: CoreConfig) -> None:
         """Async initialize of module."""
-        ffmpeg_present, libsoxr_support, version = await check_audio_support()
-        major_version = int("".join(char for char in version.split(".")[0] if not char.isalpha()))
-        if not ffmpeg_present:
-            self.logger.error("FFmpeg binary not found on your system, playback will NOT work!.")
-        elif major_version < 6:
-            self.logger.error("FFMpeg version is too old, you may run into playback issues.")
-        elif not libsoxr_support:
-            self.logger.warning(
-                "FFmpeg version found without libsoxr support, "
-                "highest quality audio not available. "
-            )
-        self.logger.info(
-            "Detected ffmpeg version %s %s",
-            version,
-            "with libsoxr support" if libsoxr_support else "",
-        )
         # copy log level to audio/ffmpeg loggers
         AUDIO_LOGGER.setLevel(self.logger.level)
         FFMPEG_LOGGER.setLevel(self.logger.level)
+        # perform check for ffmpeg version
+        await check_ffmpeg_version()
         # start the webserver
         self.publish_port = config.get_value(CONF_BIND_PORT)
         self.publish_ip = config.get_value(CONF_PUBLISH_IP)
