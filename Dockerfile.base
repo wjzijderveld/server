@@ -16,8 +16,8 @@ RUN set -x \
         libnfs \
         # openssl-dev is needed for airplay
         openssl-dev  \
-    # install snapcast from community repo (because we need 0.28+)
-    && apk add --no-cache snapcast --repository=https://dl-cdn.alpinelinux.org/alpine/v3.20/community
+        # install snapcast so the snapcast provider can run the builtin snapcast server
+        snapcast
 
 # Get static ffmpeg builds from https://hub.docker.com/r/mwader/static-ffmpeg/
 COPY --from=mwader/static-ffmpeg:7.1 /ffmpeg /usr/local/bin/
