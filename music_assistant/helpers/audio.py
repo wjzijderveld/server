@@ -402,6 +402,10 @@ async def get_media_stream(
             streamdetails.uri,
             seconds_streamed,
         )
+        if ffmpeg_proc.returncode != 0:
+            log_tail = "\n".join(ffmpeg_proc.log_history[:25])
+            logger.debug(log_tail)
+
         streamdetails.seconds_streamed = seconds_streamed
         # store accurate duration
         if finished and not streamdetails.seek_position and seconds_streamed:
