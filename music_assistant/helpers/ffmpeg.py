@@ -289,10 +289,9 @@ def get_ffmpeg_args(
             *filter_params,
         ]
 
-    # determine if we need to do resampling
-    if (
-        input_format.sample_rate != output_format.sample_rate
-        or input_format.bit_depth > output_format.bit_depth
+    # determine if we need to do resampling (or dithering)
+    if input_format.sample_rate != output_format.sample_rate or (
+        input_format.bit_depth > 16 and output_format.bit_depth == 16
     ):
         libsoxr_support = get_global_cache_value(CACHE_ATTR_LIBSOXR_PRESENT)
         # prefer resampling with libsoxr due to its high quality
@@ -309,6 +308,8 @@ def get_ffmpeg_args(
             resample_filter += f":osr={output_format.sample_rate}"
 
         # bit depth conversion: apply dithering when going down to 16 bits
+        # this is only needed when we need to back to 16 bits
+        # when going from 32bits FP to 24 bits no dithering is needed
         if output_format.bit_depth == 16 and input_format.bit_depth > 16:
             resample_filter += ":osf=s16:dither_method=triangular_hp"
 
