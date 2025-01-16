@@ -27,9 +27,6 @@ COPY --from=mwader/static-ffmpeg:7.1 /ffprobe /usr/local/bin/
 RUN mkdir -p /usr/local/bin/widevine_cdm
 COPY widevine_cdm/* /usr/local/bin/widevine_cdm/
 
-# ensure UV is installed
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
 # JEMalloc for more efficient memory management
 ENV LD_PRELOAD="/usr/lib/libjemalloc.so.2"
 
