@@ -361,6 +361,7 @@ async def get_media_stream(
     chunk_number = 0
     buffer: bytes = b""
     finished = False
+    cancelled = False
     ffmpeg_proc = FFMpeg(
         audio_input=audio_source,
         input_format=streamdetails.audio_format,
@@ -447,23 +448,22 @@ async def get_media_stream(
         # wait until stderr also completed reading
         await ffmpeg_proc.wait_with_timeout(5)
         finished = True
-    except Exception as err:
-        if isinstance(err, asyncio.CancelledError):
+    except (Exception, GeneratorExit) as err:
+        if isinstance(err, asyncio.CancelledError | GeneratorExit):
             # we were cancelled, just raise
+            cancelled = True
             raise
         logger.error("Error while streaming %s: %s", streamdetails.uri, err)
         streamdetails.stream_error = True
     finally:
-        if not finished:
-            logger.log(VERBOSE_LOG_LEVEL, "Closing ffmpeg...")
-            await ffmpeg_proc.close()
+        # always ensure close is called which also handles all cleanup
+        await ffmpeg_proc.close()
 
         # try to determine how many seconds we've streamed
         seconds_streamed = bytes_sent / pcm_format.pcm_sample_size if bytes_sent else 0
-        if ffmpeg_proc.returncode != 0:
-            # dump the last 25 lines of the log in case of an unclean exit
-            log_tail = "\n" + "\n".join(list(ffmpeg_proc.log_history)[-25:])
-            logger.debug(log_tail)
+        if not cancelled and ffmpeg_proc.returncode != 0:
+            # dump the last 5 lines of the log in case of an unclean exit
+            log_tail = "\n" + "\n".join(list(ffmpeg_proc.log_history)[-5:])
         else:
             log_tail = ""
         logger.debug(
@@ -505,9 +505,14 @@ async def get_media_stream(
                         media_type=streamdetails.media_type,
                     )
                 )
-        elif streamdetails.loudness is None and streamdetails.volume_normalization_mode not in (
-            VolumeNormalizationMode.DISABLED,
-            VolumeNormalizationMode.FIXED_GAIN,
+        elif (
+            streamdetails.loudness is None
+            and streamdetails.volume_normalization_mode
+            not in (
+                VolumeNormalizationMode.DISABLED,
+                VolumeNormalizationMode.FIXED_GAIN,
+            )
+            and (finished or (seconds_streamed >= 30))
         ):
             # dynamic mode not allowed and no measurement known, we need to analyze the audio
             # add background task to start analyzing the audio
@@ -1139,6 +1144,7 @@ def _get_normalization_mode(
     if streamdetails.loudness and preference not in (
         VolumeNormalizationMode.DISABLED,
         VolumeNormalizationMode.FIXED_GAIN,
+        VolumeNormalizationMode.DYNAMIC,
     ):
         return VolumeNormalizationMode.MEASUREMENT_ONLY
 
