@@ -382,9 +382,9 @@ async def get_media_stream(
         bytes_sent += len(buffer)
         yield buffer
         del buffer
-        finished = True
         # wait until stderr also completed reading
         await ffmpeg_proc.wait_with_timeout(5)
+        finished = True
     except Exception as err:
         if isinstance(err, asyncio.CancelledError):
             # we were cancelled, just raise
