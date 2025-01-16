@@ -311,8 +311,11 @@ def get_ffmpeg_args(  # noqa: PLR0915
         input_format.sample_rate != output_format.sample_rate
         or input_format.bit_depth > output_format.bit_depth
     ):
-        # prefer resampling with libsoxr due to its high quality
-        if libsoxr_support:
+        # prefer resampling with libsoxr due to its high quality (if its available)
+        # but skip libsoxr if loudnorm filter is present, due to this bug:
+        # https://trac.ffmpeg.org/ticket/11323
+        loudnorm_present = any("loudnorm" in f for f in filter_params)
+        if libsoxr_support and not loudnorm_present:
             resample_filter = "aresample=resampler=soxr:precision=30"
         else:
             resample_filter = "aresample=resampler=swr"
