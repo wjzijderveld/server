@@ -213,7 +213,7 @@ class SpotifyConnectProvider(MusicProvider):
             allow_seek=False,
             can_seek=False,
             stream_type=StreamType.CUSTOM,
-            extra_input_args=["-readrate", "1.0", "-readrate_initial_burst", "10"],
+            extra_input_args=["-re"],
         )
         return streamdetails
 
