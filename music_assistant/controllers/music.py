@@ -576,7 +576,7 @@ class MusicController(CoreController):
 
     @api_command("music/library/remove_item")
     async def remove_item_from_library(
-        self, media_type: MediaType, library_item_id: str | int
+        self, media_type: MediaType, library_item_id: str | int, recursive: bool = True
     ) -> None:
         """
         Remove item from the library.
@@ -593,7 +593,7 @@ class MusicController(CoreController):
                 # so we need to be a bit forgiving here
                 with suppress(NotImplementedError):
                     await prov_controller.library_remove(provider_mapping.item_id, item.media_type)
-        await ctrl.remove_item_from_library(library_item_id)
+        await ctrl.remove_item_from_library(library_item_id, recursive)
 
     @api_command("music/library/add_item")
     async def add_item_to_library(

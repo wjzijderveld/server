@@ -655,17 +655,23 @@ class MusicProvider(Provider):
                             for x in item.provider_mappings
                             if x.provider_domain != self.domain
                         }
-                        if not remaining_providers and media_type != MediaType.ARTIST:
-                            # this item is removed from the provider's library
-                            # and we have no other providers attached to it
-                            # it is safe to remove it from the MA library too
-                            # note we skip artists here to prevent a recursive removal
-                            # of all albums and tracks underneath this artist
-                            await controller.remove_item_from_library(db_id)
-                        else:
-                            # otherwise: just unmark favorite
+                        if remaining_providers:
+                            continue
+                        # this item is removed from the provider's library
+                        # and we have no other providers attached to it
+                        # it is safe to remove it from the MA library too
+                        # note that we do not remove item's recursively on purpose
+                        try:
+                            await controller.remove_item_from_library(db_id, recursive=False)
+                        except MusicAssistantError as err:
+                            # this is probably because the item still has dependents
+                            self.logger.warning(
+                                "Error removing item %s from library: %s", db_id, str(err)
+                            )
+                            # just un-favorite the item if we can't remove it
                             await controller.set_favorite(db_id, False)
-                await asyncio.sleep(0)  # yield to eventloop
+                        await asyncio.sleep(0)  # yield to eventloop
+
             await self.mass.cache.set(
                 media_type.value,
                 list(cur_db_ids),
