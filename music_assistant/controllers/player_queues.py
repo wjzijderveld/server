@@ -1037,7 +1037,7 @@ class PlayerQueuesController(CoreController):
                 if stream_details
                 else 0
             )
-            fully_played = position >= (stream_details.duration or 3600) - 5
+            fully_played = stream_details and (position >= (stream_details.duration or 3600) - 5)
             self.logger.debug(
                 "PlayerQueue %s played item %s for %s seconds - fully_played: %s - progress: %s",
                 queue.display_name,
