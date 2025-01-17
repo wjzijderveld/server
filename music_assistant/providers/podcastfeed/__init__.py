@@ -227,7 +227,7 @@ class PodcastMusicprovider(MusicProvider):
             provider=self.lookup_key,
             name=name,
             duration=episode_obj["total_time"],
-            position=episode_obj.get("number", fallback_position),
+            position=episode_obj.get("number", episode_obj.get("published", fallback_position)),
             podcast=ItemMapping(
                 item_id=self.podcast_id,
                 provider=self.lookup_key,
