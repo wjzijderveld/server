@@ -621,8 +621,28 @@ class MusicProvider(Provider):
                         library_item = await controller.update_item_in_library(
                             library_item.item_id, prov_item
                         )
-                    elif library_item.available != prov_item.available:
+                    if library_item.available != prov_item.available:
                         # existing item availability changed
+                        library_item = await controller.update_item_in_library(
+                            library_item.item_id, prov_item
+                        )
+                    if (
+                        getattr(library_item, "resume_position_ms", None)
+                        != (resume_pos_prov := getattr(prov_item, "resume_position_ms", None))
+                        and resume_pos_prov is not None
+                    ):
+                        # resume_position_ms changed (audiobook only)
+                        library_item.resume_position_ms = resume_pos_prov
+                        library_item = await controller.update_item_in_library(
+                            library_item.item_id, prov_item
+                        )
+                    if (
+                        getattr(library_item, "fully_played", None)
+                        != (fully_played_prov := getattr(prov_item, "fully_played", None))
+                        and fully_played_prov is not None
+                    ):
+                        # fully_played changed (audiobook only)
+                        library_item.fully_played = fully_played_prov
                         library_item = await controller.update_item_in_library(
                             library_item.item_id, prov_item
                         )

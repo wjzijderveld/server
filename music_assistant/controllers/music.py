@@ -798,13 +798,15 @@ class MusicController(CoreController):
 
         # forward to provider(s) to sync resume state (e.g. for audiobooks)
         for prov_mapping in media_item.provider_mappings:
+            if fully_played is None:
+                fully_played = True
             if music_prov := self.mass.get_provider(prov_mapping.provider_instance):
                 self.mass.create_task(
                     music_prov.on_played(
                         media_type=media_item.media_type,
                         item_id=prov_mapping.item_id,
-                        fully_played=False,
-                        position=0,
+                        fully_played=fully_played,
+                        position=seconds_played,
                     )
                 )
 
