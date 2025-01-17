@@ -134,7 +134,12 @@ class FFMpeg(AsyncProcess):
         try:
             start = time.time()
             self.logger.log(VERBOSE_LOG_LEVEL, "Start reading audio data from source...")
-            async for chunk in TimedAsyncGenerator(self.audio_input, timeout=30):
+            # use TimedAsyncGenerator to catch we're stuck waiting on data forever
+            # don't set this timeout too low because in some cases it can indeed take a while
+            # for data to arrive (e.g. when there is X amount of seconds in the buffer)
+            # so this timeout is just to catch if the source is stuck and rpeort it and not
+            # to recover from it.
+            async for chunk in TimedAsyncGenerator(self.audio_input, timeout=300):
                 await self.write(chunk)
             self.logger.log(
                 VERBOSE_LOG_LEVEL, "Audio data source exhausted in %.2fs", time.time() - start

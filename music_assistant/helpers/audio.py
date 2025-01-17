@@ -47,7 +47,7 @@ from .dsp import filter_to_ffmpeg_params
 from .ffmpeg import FFMpeg, get_ffmpeg_stream
 from .playlists import IsHLSPlaylist, PlaylistItem, fetch_playlist, parse_m3u
 from .process import AsyncProcess, communicate
-from .util import TimedAsyncGenerator, create_tempfile, detect_charset
+from .util import create_tempfile, detect_charset
 
 if TYPE_CHECKING:
     from music_assistant_models.config_entries import CoreConfig, PlayerConfig
@@ -384,9 +384,7 @@ async def get_media_stream(
             pcm_format.content_type.value,
             ffmpeg_proc.proc.pid,
         )
-        async for chunk in TimedAsyncGenerator(
-            ffmpeg_proc.iter_chunked(pcm_format.pcm_sample_size), timeout=30
-        ):
+        async for chunk in ffmpeg_proc.iter_chunked(pcm_format.pcm_sample_size):
             # for non-tracks we just yield all chunks directly
             if streamdetails.media_type != MediaType.TRACK:
                 yield chunk
@@ -467,7 +465,7 @@ async def get_media_stream(
             log_tail = ""
         logger.debug(
             "stream %s (with code %s) for %s - seconds streamed: %s %s",
-            "finished" if finished else "aborted",
+            "cancelled" if cancelled else "finished" if finished else "aborted",
             ffmpeg_proc.returncode,
             streamdetails.uri,
             seconds_streamed,
