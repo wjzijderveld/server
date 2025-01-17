@@ -164,7 +164,7 @@ class Audiobookshelf(MusicProvider):
             item_id=abs_podcast.id_,
             name=title,
             publisher=abs_podcast.media.metadata.author,
-            provider=self.domain,
+            provider=self.lookup_key,
             total_episodes=abs_podcast.media.num_episodes,
             provider_mappings={
                 ProviderMapping(
@@ -214,13 +214,13 @@ class Audiobookshelf(MusicProvider):
                 position = fallback_episode_cnt
         mass_episode = PodcastEpisode(
             item_id=episode_id,
-            provider=self.domain,
+            provider=self.lookup_key,
             name=episode.title,
             duration=int(episode.duration),
             position=position,
             podcast=ItemMapping(
                 item_id=prov_podcast_id,
-                provider=self.instance_id,
+                provider=self.lookup_key,
                 name=episode.title,
                 media_type=MediaType.PODCAST,
             ),
@@ -292,7 +292,7 @@ class Audiobookshelf(MusicProvider):
     async def _parse_audiobook(self, abs_audiobook: ABSAudioBook) -> Audiobook:
         mass_audiobook = Audiobook(
             item_id=abs_audiobook.id_,
-            provider=self.domain,
+            provider=self.lookup_key,
             name=abs_audiobook.media.metadata.title,
             duration=int(abs_audiobook.media.duration),
             provider_mappings={
@@ -378,7 +378,7 @@ class Audiobookshelf(MusicProvider):
         # audiobookshelf returns information of stream, so we should be able
         # to lift unknown at some point.
         return StreamDetails(
-            provider=self.instance_id,
+            provider=self.lookup_key,
             item_id=audiobook_id,
             audio_format=AudioFormat(
                 content_type=ContentType.UNKNOWN,
@@ -404,7 +404,7 @@ class Audiobookshelf(MusicProvider):
         media_url = abs_episode.audio_track.content_url
         full_url = f"{base_url}{media_url}?token={token}"
         return StreamDetails(
-            provider=self.instance_id,
+            provider=self.lookup_key,
             item_id=podcast_id,
             audio_format=AudioFormat(
                 content_type=ContentType.UNKNOWN,
@@ -453,7 +453,7 @@ class Audiobookshelf(MusicProvider):
                 BrowseFolder(
                     item_id=library.id_,
                     name=library.name,
-                    provider=self.instance_id,
+                    provider=self.lookup_key,
                     path=f"{self.instance_id}://{item_path}/{library.id_}",
                 )
             )
@@ -486,7 +486,7 @@ class Audiobookshelf(MusicProvider):
             return ItemMapping(
                 media_type=media_type,
                 item_id=item.id_,
-                provider=self.instance_id,
+                provider=self.lookup_key,
                 name=title,
                 image=image,
             )
