@@ -314,8 +314,12 @@ class SonosPlayer:
         elif active_service == MusicService.SPOTIFY:
             self.mass_player.active_source = SOURCE_SPOTIFY
         elif active_service == MusicService.MUSIC_ASSISTANT:
-            if object_id := container.get("id", {}).get("objectId"):
+            if self.client.player.is_coordinator:
+                self.mass_player.active_source = self.mass_player.player_id
+            elif object_id := container.get("id", {}).get("objectId"):
                 self.mass_player.active_source = object_id.split(":")[-1]
+            else:
+                self.mass_player.active_source = None
         else:
             # its playing some service we did not yet map
             self.mass_player.active_source = active_service
@@ -410,7 +414,7 @@ class SonosPlayer:
                     self.mass.players.update(self.player_id)
                     self.reconnect(5)
 
-        self._listen_task = asyncio.create_task(_listener())
+        self._listen_task = self.mass.create_task(_listener())
         await init_ready.wait()
 
     async def _disconnect(self) -> None:

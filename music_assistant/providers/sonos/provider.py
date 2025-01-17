@@ -523,7 +523,7 @@ class SonosPlayerProvider(PlayerProvider):
             if "positionMillis" not in item:
                 continue
             mass_player.current_media = PlayerMedia(
-                uri=item["mediaUrl"], queue_id=sonos_playback_id, queue_item_id=item["id"]
+                uri=item["mediaUrl"], queue_id=sonos_player_id, queue_item_id=item["id"]
             )
             mass_player.elapsed_time = item["positionMillis"] / 1000
             mass_player.elapsed_time_last_updated = time.time()
