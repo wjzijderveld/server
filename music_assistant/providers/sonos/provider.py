@@ -350,6 +350,10 @@ class SonosPlayerProvider(PlayerProvider):
             self, player_id, discovery_info=discovery_info, ip_address=address
         )
         await sonos_player.setup()
+        # trigger update on all existing players to update the group status
+        for _player in self.sonos_players.values():
+            if _player.player_id != player_id:
+                _player.on_player_event(None)
 
     async def _handle_sonos_queue_itemwindow(self, request: web.Request) -> web.Response:
         """

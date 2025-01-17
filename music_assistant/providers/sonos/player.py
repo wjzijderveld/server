@@ -141,7 +141,7 @@ class SonosPlayer:
         # register callback for state changed
         self._on_cleanup_callbacks.append(
             self.client.subscribe(
-                self._on_player_event,
+                self.on_player_event,
                 (
                     SonosEventType.GROUP_UPDATED,
                     SonosEventType.PLAYER_UPDATED,
@@ -426,7 +426,7 @@ class SonosPlayer:
             await self.client.disconnect()
         self.logger.debug("Disconnected from player API")
 
-    def _on_player_event(self, event: SonosEvent) -> None:
+    def on_player_event(self, event: SonosEvent | None) -> None:
         """Handle incoming event from player."""
         self.update_attributes()
         self.mass.players.update(self.player_id)

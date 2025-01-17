@@ -421,15 +421,15 @@ class MusicAssistant:
                 "Non-Async operation detected: This method may only be called from the eventloop."
             )
 
-        def _create_task() -> None:
+        def _create_task(_target: Coroutine[Any, Any, _R]) -> None:
             self._tracked_timers.pop(task_id)
-            if TYPE_CHECKING:
-                target = cast(Coroutine[Any, Any, _R], target)  # noqa: F823
-            self.create_task(target, *args, task_id=task_id, abort_existing=True, **kwargs)
+            self.create_task(_target, *args, task_id=task_id, abort_existing=True, **kwargs)
 
         if asyncio.iscoroutinefunction(target) or asyncio.iscoroutine(target):
             # coroutine function
-            handle = self.loop.call_later(delay, _create_task)
+            if TYPE_CHECKING:
+                target = cast(Coroutine[Any, Any, _R], target)
+            handle = self.loop.call_later(delay, _create_task, target)
         else:
             # regular callable
             if TYPE_CHECKING:
