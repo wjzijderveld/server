@@ -301,7 +301,7 @@ class SpotifyConnectProvider(MusicProvider):
     def _setup_player_daemon(self) -> None:
         """Handle setup of the spotify connect daemon for a player."""
         self._librespot_started.clear()
-        self._runner_task = asyncio.create_task(self._librespot_runner())
+        self._runner_task = self.mass.create_task(self._librespot_runner())
 
     def _on_mass_player_event(self, event: MassEvent) -> None:
         """Handle incoming event from linked airplay player."""
