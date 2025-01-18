@@ -771,6 +771,9 @@ class PlayerQueuesController(CoreController):
         queue.index_in_buffer = index
         queue.flow_mode_stream_log = []
         queue.flow_mode = await self.mass.config.get_player_config_value(queue_id, CONF_FLOW_MODE)
+        # no point in enabled flow mode for radio or plugin sources
+        if queue_item.media_type in (MediaType.RADIO, MediaType.PLUGIN_SOURCE):
+            queue.flow_mode = False
         queue.current_item = queue_item
 
         # handle resume point of audiobook(chapter) or podcast(episode)
@@ -1242,6 +1245,9 @@ class PlayerQueuesController(CoreController):
         # enqueue next track on the player if we're not in flow mode
         task_id = f"enqueue_next_item_{queue_id}"
         self.mass.call_later(2, self._enqueue_next_item, queue_id, item_id, task_id=task_id)
+        # repeat this one time because some players
+        # don't accept the next track when still buffering one
+        self.mass.call_later(30, self._enqueue_next_item, queue_id, item_id, task_id=task_id)
 
     # Main queue manipulation methods
 
