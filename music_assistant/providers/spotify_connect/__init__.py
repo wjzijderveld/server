@@ -31,6 +31,7 @@ from music_assistant_models.streamdetails import LivestreamMetadata, StreamDetai
 
 from music_assistant.constants import CONF_ENTRY_WARN_PREVIEW
 from music_assistant.helpers.audio import get_chunksize
+from music_assistant.helpers.ffmpeg import get_ffmpeg_stream
 from music_assistant.helpers.process import AsyncProcess
 from music_assistant.models.music_provider import MusicProvider
 from music_assistant.providers.spotify.helpers import get_librespot_binary
@@ -224,8 +225,16 @@ class SpotifyConnectProvider(MusicProvider):
         if not self._librespot_proc or self._librespot_proc.closed:
             raise MediaNotFoundError(f"Librespot not ready for: {streamdetails.item_id}")
         self._player_connected = True
-        while True:
-            yield await self._audio_buffer.get()
+        try:
+            while True:
+                yield await self._audio_buffer.get()
+        finally:
+            self._player_connected = False
+            await asyncio.sleep(2)
+            if not self._player_connected:
+                # handle situation where the stream is disconnected from the MA player
+                # easiest way to unmark this librespot instance as active player is to close it
+                await self._librespot_proc.close(True)
 
     async def _librespot_runner(self) -> None:
         """Run the spotify connect daemon in a background task."""
@@ -285,9 +294,16 @@ class SpotifyConnectProvider(MusicProvider):
 
             async def audio_reader() -> None:
                 chunksize = get_chunksize(AudioFormat(content_type=ContentType.OGG))
-                async for chunk in librespot.iter_chunked(chunksize):
+                async for chunk in get_ffmpeg_stream(
+                    librespot.iter_chunked(chunksize),
+                    input_format=AudioFormat(content_type=ContentType.OGG),
+                    output_format=AudioFormat(content_type=ContentType.OGG),
+                    extra_input_args=["-readrate", "1.0"],
+                ):
                     if librespot.closed or self._stop_called:
                         break
+                    if not self._player_connected:
+                        continue
                     await self._audio_buffer.put(chunk)
 
             await asyncio.gather(log_reader(), audio_reader())
