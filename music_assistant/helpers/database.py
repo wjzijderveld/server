@@ -80,8 +80,15 @@ class DatabaseConnection:
         """Perform async initialization."""
         self._db = await aiosqlite.connect(self.db_path)
         self._db.row_factory = aiosqlite.Row
+        # setup some default settings for more performance
         await self.execute("PRAGMA analysis_limit=10000;")
-        await self.execute("PRAGMA optimize;")
+        await self.execute("PRAGMA locking_mode=exclusive;")
+        await self.execute("PRAGMA journal_mode=WAL;")
+        await self.execute("PRAGMA journal_size_limit = 6144000;")
+        await self.execute("PRAGMA synchronous=normal;")
+        await self.execute("PRAGMA temp_store=memory;")
+        await self.execute("PRAGMA mmap_size = 30000000000;")
+        await self.execute("PRAGMA cache_size = -64000;")
         await self.commit()
 
     async def close(self) -> None:
