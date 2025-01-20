@@ -966,7 +966,7 @@ def get_player_filter_params(
             # We can still apply the DSP of that single player.
             if player.group_childs:
                 child_player = mass.players.get(player.group_childs[0])
-                dsp = mass.config.get_player_dsp_config(mass, child_player)
+                dsp = mass.config.get_player_dsp_config(child_player)
             else:
                 # This should normally never happen, but if it does, we disable DSP.
                 dsp.enabled = False
