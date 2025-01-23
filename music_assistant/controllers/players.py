@@ -358,9 +358,6 @@ class PlayerController(CoreController):
             # allow the stop command to process and prevent race conditions
             await asyncio.sleep(0.2)
 
-        # store last power state in cache
-        await self.mass.cache.set(player_id, powered, base_key="player_power")
-
         # always optimistically set the power state to update the UI
         # as fast as possible and prevent race conditions
         player.powered = powered
@@ -846,12 +843,6 @@ class PlayerController(CoreController):
         # ignore disabled players
         if not player.enabled:
             return
-
-        # restore powered state from cache
-        if player.state == PlayerState.PLAYING:
-            player.powered = True
-        elif (cache := await self.mass.cache.get(player_id, base_key="player_power")) is not None:
-            player.powered = cache
 
         self.logger.info(
             "Player registered: %s/%s",
