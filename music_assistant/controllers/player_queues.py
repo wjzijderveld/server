@@ -132,9 +132,8 @@ class PlayerQueuesController(CoreController):
         """Cleanup on exit."""
         # stop all playback
         for queue in self.all():
-            if queue.state not in (PlayerState.PLAYING, PlayerState.PAUSED):
-                continue
-            await self.stop(queue.queue_id)
+            if queue.state in (PlayerState.PLAYING, PlayerState.PAUSED):
+                await self.stop(queue.queue_id)
 
     async def get_config_entries(
         self,
@@ -815,9 +814,9 @@ class PlayerQueuesController(CoreController):
     ) -> None:
         """Transfer queue to another queue."""
         if not (source_queue := self.get(source_queue_id)):
-            raise PlayerUnavailableError("Queue {source_queue_id} is not available")
+            raise PlayerUnavailableError(f"Queue {source_queue_id} is not available")
         if not (target_queue := self.get(target_queue_id)):
-            raise PlayerUnavailableError("Queue {target_queue_id} is not available")
+            raise PlayerUnavailableError(f"Queue {target_queue_id} is not available")
         if auto_play is None:
             auto_play = source_queue.state == PlayerState.PLAYING
 
