@@ -752,7 +752,10 @@ class PlayerController(CoreController):
         if (
             player.active_group
             and (group_player := self.get(player.active_group))
-            and PlayerFeature.SET_MEMBERS in group_player.supported_features
+            and (
+                PlayerFeature.SET_MEMBERS in group_player.supported_features
+                or group_player.provider.startswith("player_group")
+            )
         ):
             # the player is part of a (permanent) groupplayer and the user tries to ungroup
             # redirect the command to the group provider
