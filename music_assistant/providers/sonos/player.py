@@ -488,6 +488,11 @@ class SonosPlayer:
             or play_modes.repeat != repeat_all_enabled
             or play_modes.repeat_one != repeat_single_enabled
         ):
-            await self.client.player.group.set_play_modes(
-                crossfade=crossfade, repeat=repeat_all_enabled, repeat_one=repeat_single_enabled
-            )
+            try:
+                await self.client.player.group.set_play_modes(
+                    crossfade=crossfade, repeat=repeat_all_enabled, repeat_one=repeat_single_enabled
+                )
+            except FailedCommand as err:
+                if "groupCoordinatorChanged" not in str(err):
+                    # this may happen at race conditions
+                    raise
