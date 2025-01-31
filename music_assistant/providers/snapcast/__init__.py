@@ -367,11 +367,10 @@ class SnapCastProvider(PlayerProvider):
             )
             player = Player(
                 player_id=player_id,
-                provider=self.instance_id,
+                provider=self.lookup_key,
                 type=PlayerType.PLAYER,
                 name=snap_client.friendly_name,
-                available=True,
-                powered=snap_client.connected,
+                available=snap_client.connected,
                 device_info=DeviceInfo(
                     model=snap_client._client.get("host").get("os"),
                     ip_address=snap_client._client.get("host").get("ip"),
@@ -383,7 +382,7 @@ class SnapCastProvider(PlayerProvider):
                     PlayerFeature.VOLUME_MUTE,
                 },
                 synced_to=self._synced_to(player_id),
-                can_group_with={self.instance_id},
+                can_group_with={self.lookup_key},
             )
         asyncio.run_coroutine_threadsafe(
             self.mass.players.register_or_update(player), loop=self.mass.loop

@@ -21,6 +21,7 @@ from music_assistant_models.config_entries import (
     ConfigValueType,
     PlayerConfig,
 )
+from music_assistant_models.constants import PLAYER_CONTROL_NATIVE, PLAYER_CONTROL_NONE
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -53,7 +54,10 @@ from music_assistant.constants import (
     CONF_FLOW_MODE,
     CONF_GROUP_MEMBERS,
     CONF_HTTP_PROFILE,
+    CONF_MUTE_CONTROL,
+    CONF_POWER_CONTROL,
     CONF_SAMPLE_RATES,
+    CONF_VOLUME_CONTROL,
     DEFAULT_PCM_FORMAT,
     create_sample_rates_config_entry,
 )
@@ -175,8 +179,8 @@ class PlayerGroupProvider(PlayerProvider):
         await super().loaded_in_mass()
         # temp: migrate old config entries
         # remove this after MA 2.4 release
-        for player_config in await self.mass.config.get_player_configs():
-            if player_config.provider == self.instance_id:
+        for player_config in await self.mass.config.get_player_configs(include_values=True):
+            if player_config.values.get(CONF_GROUP_TYPE) is not None:
                 # already migrated
                 continue
             # migrate old syncgroup players to this provider
@@ -227,6 +231,30 @@ class PlayerGroupProvider(PlayerProvider):
             CONF_ENTRY_GROUP_TYPE,
             CONF_ENTRY_GROUP_MEMBERS,
             CONFIG_ENTRY_DYNAMIC_MEMBERS,
+            # add player control entries as hidden entries
+            ConfigEntry(
+                key=CONF_POWER_CONTROL,
+                type=ConfigEntryType.STRING,
+                label=CONF_POWER_CONTROL,
+                default_value=PLAYER_CONTROL_NATIVE,
+                hidden=True,
+            ),
+            ConfigEntry(
+                key=CONF_VOLUME_CONTROL,
+                type=ConfigEntryType.STRING,
+                label=CONF_VOLUME_CONTROL,
+                default_value=PLAYER_CONTROL_NATIVE,
+                hidden=True,
+            ),
+            ConfigEntry(
+                key=CONF_MUTE_CONTROL,
+                type=ConfigEntryType.STRING,
+                label=CONF_MUTE_CONTROL,
+                # disable mute control for group players for now
+                # TODO: work out if all child players support mute control
+                default_value=PLAYER_CONTROL_NONE,
+                hidden=True,
+            ),
         )
         # group type is static and can not be changed. we just grab the existing, stored value
         group_type: str = self.mass.config.get_raw_player_config_value(
@@ -356,6 +384,9 @@ class PlayerGroupProvider(PlayerProvider):
         if not powered and group_player.state in (PlayerState.PLAYING, PlayerState.PAUSED):
             await self.cmd_stop(group_player.player_id)
 
+        if powered and player_id.startswith(SYNCGROUP_PREFIX):
+            await self._form_syncgroup(group_player)
+
         if powered:
             # handle TURN_ON of the group player by turning on all members
             for member in self.mass.players.iter_group_members(
@@ -379,7 +410,7 @@ class PlayerGroupProvider(PlayerProvider):
                     # solve this by powering off the other group
                     await self.mass.players.cmd_power(member.active_group, False)
                     await asyncio.sleep(1)
-                if not member.powered:
+                if not member.powered and member.power_control != PLAYER_CONTROL_NONE:
                     member.active_group = None  # needed to prevent race conditions
                     await self.mass.players.cmd_power(member.player_id, True)
                 # set active source to group player if the group (is going to be) powered
@@ -397,11 +428,9 @@ class PlayerGroupProvider(PlayerProvider):
                 member.active_group = None
                 member.active_source = None
                 # handle TURN_OFF of the group player by turning off all members
-                if member.powered:
+                if member.powered and member.power_control != PLAYER_CONTROL_NONE:
                     await self.mass.players.cmd_power(member.player_id, False)
 
-        if powered and player_id.startswith(SYNCGROUP_PREFIX):
-            await self._form_syncgroup(group_player)
         # optimistically set the group state
         group_player.powered = powered
         self.mass.players.update(group_player.player_id)
@@ -536,7 +565,7 @@ class PlayerGroupProvider(PlayerProvider):
             if ProviderFeature.SYNC_PLAYERS not in player_prov.supported_features:
                 msg = f"Provider {player_prov.name} does not support creating groups"
                 raise UnsupportedFeaturedException(msg)
-            group_type = player_prov.instance_id  # just in case only domain was sent
+            group_type = player_prov.lookup_key  # just in case only domain was sent
 
         new_group_id = f"{prefix}{shortuuid.random(8).lower()}"
         # cleanup list, just in case the frontend sends some garbage
@@ -677,7 +706,7 @@ class PlayerGroupProvider(PlayerProvider):
     async def _register_all_players(self) -> None:
         """Register all (virtual/fake) group players in the Player controller."""
         player_configs = await self.mass.config.get_player_configs(
-            self.instance_id, include_values=True
+            self.lookup_key, include_values=True
         )
         for player_config in player_configs:
             if self.mass.players.get(player_config.player_id):
@@ -714,9 +743,9 @@ class PlayerGroupProvider(PlayerProvider):
             )
             can_group_with = {
                 # allow grouping with all providers, except the playergroup provider itself
-                x.instance_id
+                x.lookup_key
                 for x in self.mass.players.providers
-                if x.instance_id != self.instance_id
+                if x.lookup_key != self.lookup_key
             }
             player_features.add(PlayerFeature.MULTI_DEVICE_DSP)
         elif player_provider := self.mass.get_provider(group_type):
@@ -725,7 +754,7 @@ class PlayerGroupProvider(PlayerProvider):
                 player_provider = cast(PlayerProvider, player_provider)
             model_name = "Sync Group"
             manufacturer = self.mass.get_provider(group_type).name
-            can_group_with = {player_provider.instance_id}
+            can_group_with = {player_provider.lookup_key}
             for feature in (PlayerFeature.PAUSE, PlayerFeature.VOLUME_MUTE, PlayerFeature.ENQUEUE):
                 if all(feature in x.supported_features for x in player_provider.players):
                     player_features.add(feature)
@@ -741,7 +770,7 @@ class PlayerGroupProvider(PlayerProvider):
 
         player = Player(
             player_id=group_player_id,
-            provider=self.instance_id,
+            provider=self.lookup_key,
             type=PlayerType.GROUP,
             name=name,
             available=True,
@@ -845,12 +874,12 @@ class PlayerGroupProvider(PlayerProvider):
         if group_type == GROUP_TYPE_UNIVERSAL:
             can_group_with = {
                 # allow grouping with all providers, except the playergroup provider itself
-                x.instance_id
+                x.lookup_key
                 for x in self.mass.players.providers
-                if x.instance_id != self.instance_id
+                if x.lookup_key != self.lookup_key
             }
         elif sync_player_provider := self.mass.get_provider(group_type):
-            can_group_with = {sync_player_provider.instance_id}
+            can_group_with = {sync_player_provider.lookup_key}
         else:
             can_group_with = {}
         player.can_group_with = can_group_with
@@ -927,7 +956,7 @@ class PlayerGroupProvider(PlayerProvider):
                 x
                 for x in members
                 if (player := self.mass.players.get(x))
-                and player.provider in (player_provider.instance_id, self.instance_id)
+                and player.provider == player_provider.lookup_key
             ]
         # cleanup members - filter out impossible choices
         syncgroup_childs: list[str] = []

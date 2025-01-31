@@ -118,19 +118,18 @@ class SonosPlayer:
             supported_features.add(PlayerFeature.PLAY_ANNOUNCEMENT)
         if not self.client.player.has_fixed_volume:
             supported_features.add(PlayerFeature.VOLUME_SET)
+            supported_features.add(PlayerFeature.VOLUME_MUTE)
         if not self.get_linked_airplay_player(False):
             supported_features.add(PlayerFeature.NEXT_PREVIOUS)
 
         # instantiate the MA player
         self.mass_player = mass_player = Player(
             player_id=self.player_id,
-            provider=self.prov.instance_id,
+            provider=self.prov.lookup_key,
             type=PlayerType.PLAYER,
             name=self.discovery_info["device"]["name"]
             or self.discovery_info["device"]["modelDisplayName"],
             available=True,
-            # sonos has no power support so we always assume its powered
-            powered=True,
             device_info=DeviceInfo(
                 model=self.discovery_info["device"]["modelDisplayName"],
                 manufacturer=self.prov.manifest.name,
@@ -139,7 +138,7 @@ class SonosPlayer:
             supported_features=supported_features,
             # NOTE: strictly taken we can have multiple sonos households
             # but for now we assume we only have one
-            can_group_with={self.prov.instance_id},
+            can_group_with={self.prov.lookup_key},
         )
         self.update_attributes()
         await self.mass.players.register_or_update(mass_player)
@@ -281,7 +280,7 @@ class SonosPlayer:
                     if x.player_id != airplay_player.player_id
                 )
             else:
-                self.mass_player.can_group_with = {self.prov.instance_id}
+                self.mass_player.can_group_with = {self.prov.lookup_key}
             self.mass_player.synced_to = None
         else:
             # player is group child (synced to another player)
@@ -311,7 +310,6 @@ class SonosPlayer:
                 PlayerState.PAUSED,
             ):
                 self.mass_player.state = airplay_player.state
-                self.mass_player.powered = True
                 self.mass_player.active_source = airplay_player.active_source
                 self.mass_player.elapsed_time = airplay_player.elapsed_time
                 self.mass_player.elapsed_time_last_updated = (
