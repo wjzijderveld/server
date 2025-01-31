@@ -689,17 +689,7 @@ class PlayerController(CoreController):
             media=media,
         )
 
-    async def enqueue_next_media(self, player_id: str, media: PlayerMedia) -> None:
-        """Handle enqueuing of a next media item on the player."""
-        player = self.get(player_id, raise_unavailable=True)
-        if PlayerFeature.ENQUEUE not in player.supported_features:
-            raise UnsupportedFeaturedException(
-                f"Player {player.display_name} does not support enqueueing"
-            )
-        player_prov = self.mass.get_provider(player.provider)
-        async with self._player_throttlers[player_id]:
-            await player_prov.enqueue_next_media(player_id=player_id, media=media)
-
+    @api_command("players/cmd/select_source")
     async def select_source(self, player_id: str, source: str) -> None:
         """
         Handle SELECT SOURCE command on given player.
@@ -721,6 +711,17 @@ class PlayerController(CoreController):
         # forward to player provider
         provider = self.mass.get_provider(player.provider)
         await provider.select_source(player_id, source)
+
+    async def enqueue_next_media(self, player_id: str, media: PlayerMedia) -> None:
+        """Handle enqueuing of a next media item on the player."""
+        player = self.get(player_id, raise_unavailable=True)
+        if PlayerFeature.ENQUEUE not in player.supported_features:
+            raise UnsupportedFeaturedException(
+                f"Player {player.display_name} does not support enqueueing"
+            )
+        player_prov = self.mass.get_provider(player.provider)
+        async with self._player_throttlers[player_id]:
+            await player_prov.enqueue_next_media(player_id=player_id, media=media)
 
     @api_command("players/cmd/group")
     @handle_player_command

@@ -36,10 +36,12 @@ from .const import (
     CONF_AIRPLAY_MODE,
     PLAYBACK_STATE_MAP,
     PLAYER_FEATURES_BASE,
+    PLAYER_SOURCE_MAP,
     SOURCE_AIRPLAY,
     SOURCE_LINE_IN,
     SOURCE_RADIO,
     SOURCE_SPOTIFY,
+    SOURCE_TV,
 )
 
 if TYPE_CHECKING:
@@ -140,6 +142,13 @@ class SonosPlayer:
             # but for now we assume we only have one
             can_group_with={self.prov.lookup_key},
         )
+        if SonosCapability.LINE_IN in self.discovery_info["device"]["capabilities"]:
+            mass_player.source_list.append(PLAYER_SOURCE_MAP[SOURCE_LINE_IN])
+        if SonosCapability.HT_PLAYBACK in self.discovery_info["device"]["capabilities"]:
+            mass_player.source_list.append(PLAYER_SOURCE_MAP[SOURCE_TV])
+        if SonosCapability.AIRPLAY in self.discovery_info["device"]["capabilities"]:
+            mass_player.source_list.append(PLAYER_SOURCE_MAP[SOURCE_AIRPLAY])
+
         self.update_attributes()
         await self.mass.players.register_or_update(mass_player)
 
@@ -201,11 +210,7 @@ class SonosPlayer:
             if player_provider := self.mass.get_provider(airplay.provider):
                 await player_provider.cmd_stop(airplay.player_id)
             return
-        try:
-            await self.client.player.group.stop()
-        except FailedCommand as err:
-            if "ERROR_PLAYBACK_NO_CONTENT" not in str(err):
-                raise
+        await self.client.player.group.stop()
 
     async def cmd_play(self) -> None:
         """Send PLAY command to given player."""
@@ -231,7 +236,20 @@ class SonosPlayer:
             if player_provider := self.mass.get_provider(airplay.provider):
                 await player_provider.cmd_pause(airplay.player_id)
             return
+        if not self.client.player.group.playback_actions.can_pause:
+            await self.cmd_stop()
+            return
         await self.client.player.group.pause()
+
+    async def cmd_seek(self, position: int) -> None:
+        """Handle SEEK command for given player.
+
+        - position: position in seconds to seek to in the current playing item.
+        """
+        if self.client.player.is_passive:
+            self.logger.debug("Ignore STOP command: Player is synced to another player.")
+            return
+        await self.client.player.group.seek(position)
 
     async def cmd_volume_set(self, volume_level: int) -> None:
         """Send VOLUME_SET command to given player."""
@@ -244,6 +262,16 @@ class SonosPlayer:
     async def cmd_volume_mute(self, muted: bool) -> None:
         """Send VOLUME MUTE command to given player."""
         await self.client.player.set_volume(muted=muted)
+
+    async def select_source(self, source: str) -> None:
+        """Handle SELECT SOURCE command on given player."""
+        if source == SOURCE_LINE_IN:
+            await self.client.player.group.load_line_in(play_on_completion=True)
+        elif source == SOURCE_TV:
+            await self.client.player.load_home_theater_playback()
+        else:
+            # unsupported source - try to clear the queue/player
+            await self.cmd_stop()
 
     def update_attributes(self) -> None:  # noqa: PLR0915
         """Update the player attributes."""
@@ -303,6 +331,8 @@ class SonosPlayer:
         container = active_group.playback_metadata.get("container")
         if container_type == ContainerType.LINEIN:
             self.mass_player.active_source = SOURCE_LINE_IN
+        elif container_type in (ContainerType.HOME_THEATER_HDMI, ContainerType.HOME_THEATER_SPDIF):
+            self.mass_player.active_source = SOURCE_TV
         elif container_type == ContainerType.AIRPLAY:
             # check if the MA airplay player is active
             if airplay_player and airplay_player.state in (
@@ -322,8 +352,14 @@ class SonosPlayer:
                 self.mass_player.active_source = SOURCE_AIRPLAY
         elif container_type == ContainerType.STATION:
             self.mass_player.active_source = SOURCE_RADIO
+            # add radio to source list if not yet there
+            if SOURCE_RADIO not in [x.id for x in self.mass_player.source_list]:
+                self.mass_player.source_list.append(PLAYER_SOURCE_MAP[SOURCE_RADIO])
         elif active_service == MusicService.SPOTIFY:
             self.mass_player.active_source = SOURCE_SPOTIFY
+            # add spotify to source list if not yet there
+            if SOURCE_SPOTIFY not in [x.id for x in self.mass_player.source_list]:
+                self.mass_player.source_list.append(PLAYER_SOURCE_MAP[SOURCE_SPOTIFY])
         elif active_service == MusicService.MUSIC_ASSISTANT:
             if self.client.player.is_coordinator:
                 self.mass_player.active_source = self.mass_player.player_id
@@ -331,18 +367,18 @@ class SonosPlayer:
                 self.mass_player.active_source = object_id.split(":")[-1]
             else:
                 self.mass_player.active_source = None
-        else:
-            # its playing some service we did not yet map
+        # its playing some service we did not yet map
+        elif container and container.get("service", {}).get("name"):
+            self.mass_player.active_source = container["service"]["name"]
+        elif container and container.get("name"):
+            self.mass_player.active_source = container["name"]
+        elif active_service:
             self.mass_player.active_source = active_service
-
-        # sonos has this weirdness that it maps idle to paused
-        # which is annoying to figure out if we want to resume or let
-        # MA back in control again. So for now, we just map it to idle here.
-        if (
-            self.mass_player.state == PlayerState.PAUSED
-            and active_service != MusicService.MUSIC_ASSISTANT
-        ):
-            self.mass_player.state = PlayerState.IDLE
+        elif container_type:
+            self.mass_player.active_source = container_type
+        else:
+            # the player has nothing loaded at all (empty queue and no service active)
+            self.mass_player.active_source = None
 
         # parse current media
         self.mass_player.elapsed_time = self.client.player.group.position

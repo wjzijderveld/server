@@ -225,6 +225,15 @@ class SonosPlayerProvider(PlayerProvider):
         if sonos_player := self.sonos_players[player_id]:
             await sonos_player.cmd_pause()
 
+    async def cmd_seek(self, player_id: str, position: int) -> None:
+        """Handle SEEK command for given player.
+
+        - player_id: player_id of the player to handle the command.
+        - position: position in seconds to seek to in the current playing item.
+        """
+        if sonos_player := self.sonos_players[player_id]:
+            await sonos_player.cmd_seek(position)
+
     async def cmd_volume_set(self, player_id: str, volume_level: int) -> None:
         """Send VOLUME_SET command to given player."""
         if sonos_player := self.sonos_players[player_id]:
@@ -376,6 +385,11 @@ class SonosPlayerProvider(PlayerProvider):
         media_info = await async_parse_tags(announcement.uri)
         duration = media_info.duration or 10
         await asyncio.sleep(duration)
+
+    async def select_source(self, player_id: str, source: str) -> None:
+        """Handle SELECT SOURCE command on given player."""
+        if sonos_player := self.sonos_players[player_id]:
+            await sonos_player.select_source(source)
 
     async def _setup_player(self, player_id: str, name: str, info: AsyncServiceInfo) -> None:
         """Handle setup of a new player that is discovered using mdns."""
