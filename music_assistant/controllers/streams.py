@@ -795,6 +795,7 @@ class StreamsController(CoreController):
         filter_params = []
         extra_input_args = streamdetails.extra_input_args or []
         # handle volume normalization
+        gain_correct: float | None = None
         if streamdetails.volume_normalization_mode == VolumeNormalizationMode.DYNAMIC:
             # volume normalization using loudnorm filter (in dynamic mode)
             # which also collects the measurement on the fly during playback
@@ -818,6 +819,7 @@ class StreamsController(CoreController):
             gain_correct = streamdetails.target_loudness - streamdetails.loudness
             gain_correct = round(gain_correct, 2)
             filter_params.append(f"volume={gain_correct}dB")
+        streamdetails.volume_normalization_gain_correct = gain_correct
 
         # work out audio source for these streamdetails
         if streamdetails.stream_type == StreamType.CUSTOM:
