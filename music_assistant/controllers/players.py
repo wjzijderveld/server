@@ -1366,14 +1366,16 @@ class PlayerController(CoreController):
         """Calculate a group volume from the grouped members."""
         if len(player.group_childs) == 0:
             # player is not a group or syncgroup
-            return player.volume_level
+            return player.volume_level or 0
         # calculate group volume from all (turned on) players
         group_volume = 0
         active_players = 0
         for child_player in self.iter_group_members(player, only_powered=True, exclude_self=False):
             if child_player.volume_control == PLAYER_CONTROL_NONE:
                 continue
-            group_volume += child_player.volume_level or 0
+            if child_player.volume_level is None:
+                continue
+            group_volume += child_player.volume_level
             active_players += 1
         if active_players:
             group_volume = group_volume / active_players
