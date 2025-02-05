@@ -659,7 +659,7 @@ async def resolve_radio_stream(mass: MusicAssistant, url: str) -> tuple[str, Str
                 stream_type = StreamType.HLS
 
     except Exception as err:
-        LOGGER.warning("Error while parsing radio URL %s: %s", url, err)
+        LOGGER.warning("Error while parsing radio URL %s: %s", url, str(err))
         return (url, stream_type)
 
     result = (resolved_url, stream_type)
