@@ -108,7 +108,6 @@ class CompareState(TypedDict):
     next_item_id: str | None
     elapsed_time: int
     stream_title: str | None
-    content_type: str | None
     codec_type: ContentType | None
     output_formats: list[str] | None
 
@@ -976,10 +975,10 @@ class PlayerQueuesController(CoreController):
         # (so child count changed, or any output format changed)
         output_formats = []
         if player.output_format:
-            output_formats.append(player.output_format.output_format_str)
+            output_formats.append(str(player.output_format))
         for child_id in player.group_childs:
             if (child := self.mass.players.get(child_id)) and child.output_format:
-                output_formats.append(child.output_format.output_format_str)
+                output_formats.append(str(child.output_format))
             else:
                 output_formats.append("unknown")
 
@@ -990,15 +989,16 @@ class PlayerQueuesController(CoreController):
             current_item_id=queue.current_item.queue_item_id if queue.current_item else None,
             next_item_id=queue.next_item.queue_item_id if queue.next_item else None,
             elapsed_time=queue.elapsed_time,
-            stream_title=queue.current_item.streamdetails.stream_title
-            if queue.current_item and queue.current_item.streamdetails
-            else None,
-            content_type=queue.current_item.streamdetails.audio_format.output_format_str
-            if queue.current_item and queue.current_item.streamdetails
-            else None,
-            codec_type=queue.current_item.streamdetails.audio_format.codec_type
-            if queue.current_item and queue.current_item.streamdetails
-            else None,
+            stream_title=(
+                queue.current_item.streamdetails.stream_title
+                if queue.current_item and queue.current_item.streamdetails
+                else None
+            ),
+            codec_type=(
+                queue.current_item.streamdetails.audio_format.codec_type
+                if queue.current_item and queue.current_item.streamdetails
+                else None
+            ),
             output_formats=output_formats,
         )
         changed_keys = get_changed_keys(prev_state, new_state)
