@@ -1550,6 +1550,7 @@ class LocalFileSystemProvider(MusicProvider):
             data=file_item,
             path=file_item.absolute_path,
             can_seek=True,
+            allow_seek=True,
         )
 
     async def _get_stream_details_for_podcast_episode(self, item_id: str) -> StreamDetails:

@@ -558,6 +558,7 @@ class BuiltinProvider(MusicProvider):
             stream_type=StreamType.HTTP,
             path=item_id,
             can_seek=not is_radio,
+            allow_seek=not is_radio,
         )
 
     async def _get_builtin_playlist_random_favorite_tracks(self) -> list[Track]:
