@@ -200,6 +200,9 @@ def get_player_dsp_details(
     ):
         dsp_state = DSPState.DISABLED_BY_UNSUPPORTED_GROUP
         dsp_config = DSPConfig(enabled=False)
+    elif dsp_state == DSPState.DISABLED:
+        # DSP is disabled by the user, remove all filters
+        dsp_config = DSPConfig(enabled=False)
 
     # remove disabled filters
     dsp_config.filters = [x for x in dsp_config.filters if x.enabled]
@@ -251,6 +254,9 @@ def get_stream_dsp_details(
     if player and player.group_childs and not is_external_group:
         # grouped playback, get DSP details for each player in the group
         for child_id in player.group_childs:
+            # skip if we already have the details (so if it's the group leader)
+            if child_id in dsp:
+                continue
             if child_player := mass.players.get(child_id):
                 dsp[child_id] = get_player_dsp_details(
                     mass, child_player, group_preventing_dsp=group_preventing_dsp
