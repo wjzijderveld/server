@@ -8,7 +8,7 @@ import logging
 import os
 import os.path
 import time
-from collections.abc import AsyncGenerator, Iterator
+from collections.abc import AsyncGenerator, Iterator, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 import aiofiles
@@ -249,11 +249,15 @@ class LocalFileSystemProvider(MusicProvider):
             )
         return result
 
-    async def browse(self, path: str) -> list[MediaItemType | ItemMapping]:
+    async def browse(self, path: str) -> Sequence[MediaItemType | ItemMapping]:
         """Browse this provider's items.
 
         :param path: The path to browse, (e.g. provid://artists).
         """
+        if self.media_content_type in ("audiobooks", "podcasts"):
+            # for audiobooks and podcasts just use the default implementation
+            # so we dont have to deal with multi-part audiobooks and podcast episodes
+            return await super().browse(path)
         items: list[MediaItemType | ItemMapping] = []
         item_path = path.split("://", 1)[1]
         if not item_path:
