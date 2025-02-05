@@ -681,7 +681,7 @@ class PlayerController(CoreController):
         """
         player = self._get_player_with_redirect(player_id)
         # power on the player if needed
-        if not player.powered and player.power_control != PLAYER_CONTROL_NONE:
+        if player.powered is False and player.power_control != PLAYER_CONTROL_NONE:
             await self.cmd_power(player.player_id, True)
         player_prov = self.get_player_provider(player.player_id)
         await player_prov.play_media(
