@@ -1261,6 +1261,8 @@ class MusicController(CoreController):
         db_path = os.path.join(self.mass.storage_path, "library.db")
         await asyncio.to_thread(os.remove, db_path)
         await self._setup_database()
+        # initiate full sync
+        self.start_sync()
 
     async def __create_database_tables(self) -> None:
         """Create database tables."""
