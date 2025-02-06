@@ -174,7 +174,8 @@ class MusicController(CoreController):
         """Cleanup on exit."""
         if self._sync_task and not self._sync_task.done():
             self._sync_task.cancel()
-        await self.database.close()
+        if self.database:
+            await self.database.close()
 
     @property
     def providers(self) -> list[MusicProvider]:
