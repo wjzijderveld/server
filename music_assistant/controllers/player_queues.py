@@ -1109,11 +1109,11 @@ class PlayerQueuesController(CoreController):
             msg = f"PlayerQueue {queue_id} is not available"
             raise PlayerUnavailableError(msg)
         cur_index = self.index_by_id(queue_id, current_item_id)
+        next_item: QueueItem | None = None
         idx = 0
         while True:
             if cur_index is None:
                 break
-            next_item: QueueItem | None = None
             next_index = self._get_next_index(queue_id, cur_index + idx)
             if next_index is None:
                 raise QueueEmpty("No more tracks left in the queue.")
