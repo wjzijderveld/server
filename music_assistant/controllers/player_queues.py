@@ -17,7 +17,7 @@ import asyncio
 import random
 import time
 from types import NoneType
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
@@ -51,12 +51,7 @@ from music_assistant_models.player import PlayerMedia
 from music_assistant_models.player_queue import PlayerQueue
 from music_assistant_models.queue_item import QueueItem
 
-from music_assistant.constants import (
-    CONF_CROSSFADE,
-    CONF_FLOW_MODE,
-    DB_TABLE_PLAYLOG,
-    MASS_LOGO_ONLINE,
-)
+from music_assistant.constants import CONF_CROSSFADE, CONF_FLOW_MODE, MASS_LOGO_ONLINE
 from music_assistant.helpers.api import api_command
 from music_assistant.helpers.audio import get_stream_details, get_stream_dsp_details
 from music_assistant.helpers.throttle_retry import BYPASS_THROTTLER
@@ -1427,31 +1422,8 @@ class PlayerQueuesController(CoreController):
             raise InvalidDataError(
                 f"Unable to resolve chapter to play for Audiobook {audio_book.name}"
             )
-        # prefer the resume point from the provider's item
-        for prov_mapping in audio_book.provider_mappings:
-            if not (provider := self.mass.get_provider(prov_mapping.provider_instance)):
-                continue
-            if provider_item := await provider.get_audiobook(prov_mapping.item_id):
-                if provider_item.fully_played:
-                    return 0
-                if provider_item.resume_position_ms is not None:
-                    return provider_item.resume_position_ms
-        # fallback to the resume point from the playlog (if available)
-        resume_info_db_row = await self.mass.music.database.get_row(
-            DB_TABLE_PLAYLOG,
-            {
-                "item_id": audio_book.item_id,
-                "provider": audio_book.provider,
-                "media_type": MediaType.AUDIOBOOK,
-            },
-        )
-        if resume_info_db_row is not None:
-            if resume_info_db_row["fully_played"]:
-                return 0
-            if resume_info_db_row["seconds_played"]:
-                return int(resume_info_db_row["seconds_played"] * 1000)
-
-        return 0
+        full_played, resume_position_ms = await self.mass.music.get_resume_position(audio_book)
+        return 0 if full_played else resume_position_ms
 
     async def get_next_podcast_episodes(
         self, podcast: Podcast | None, episode: PodcastEpisode | str | None
@@ -1460,7 +1432,17 @@ class PlayerQueuesController(CoreController):
         if podcast is None and isinstance(episode, str | NoneType):
             raise InvalidDataError("Either podcast or episode must be provided")
         if podcast is None:
-            podcast = episode.podcast
+            # single podcast episode requested
+            self.logger.debug(
+                "Fetching resume point to play for Podcast episode %s",
+                episode.name,
+            )
+            episode = cast(PodcastEpisode, episode)
+            fully_played, resume_position_ms = await self.mass.music.get_resume_position(episode)
+            episode.fully_played = fully_played
+            episode.resume_position_ms = 0 if fully_played else resume_position_ms
+            return [episode]
+        # podcast with optional start episode requested
         self.logger.debug(
             "Fetching episode(s) and resume point to play for Podcast %s",
             podcast.name,
@@ -1470,12 +1452,28 @@ class PlayerQueuesController(CoreController):
         # so we need to find the index of the episode in the list
         if isinstance(episode, PodcastEpisode):
             episode = next((x for x in all_episodes if x.uri == episode.uri), None)
+            # ensure we have accurate resume info
+            fully_played, resume_position_ms = await self.mass.music.get_resume_position(episode)
+            episode.resume_position_ms = 0 if fully_played else resume_position_ms
         elif isinstance(episode, str):
             episode = next((x for x in all_episodes if episode in (x.uri, x.item_id)), None)
+            # ensure we have accurate resume info
+            fully_played, resume_position_ms = await self.mass.music.get_resume_position(episode)
+            episode.resume_position_ms = 0 if fully_played else resume_position_ms
         else:
             # get first episode that is not fully played
-            episode = next((x for x in all_episodes if not x.fully_played), None)
-            if episode is None:
+            for episode in all_episodes:
+                if episode.fully_played:
+                    continue
+                # ensure we have accurate resume info
+                fully_played, resume_position_ms = await self.mass.music.get_resume_position(
+                    episode
+                )
+                if fully_played:
+                    continue
+                episode.resume_position_ms = resume_position_ms
+                break
+            else:
                 # no episodes found that are not fully played, so we start at the beginning
                 episode = next((x for x in all_episodes), None)
         if episode is None:
@@ -1571,12 +1569,14 @@ class PlayerQueuesController(CoreController):
             self.mass.create_task(self.mass.music.mark_item_played(media_item))
             return await self.get_album_tracks(media_item, start_item)
         if media_item.media_type == MediaType.AUDIOBOOK:
-            if resume_point := await self.get_audiobook_resume_point(media_item, start_item):
-                media_item.resume_position_ms = resume_point
+            # ensure we grab the correct/latest resume point info
+            media_item.resume_position_ms = await self.get_audiobook_resume_point(
+                media_item, start_item
+            )
             return [media_item]
         if media_item.media_type == MediaType.PODCAST:
             self.mass.create_task(self.mass.music.mark_item_played(media_item))
-            return await self.get_next_podcast_episodes(media_item, start_item or media_item)
+            return await self.get_next_podcast_episodes(media_item, start_item)
         if media_item.media_type == MediaType.PODCAST_EPISODE:
             return await self.get_next_podcast_episodes(None, media_item)
         # all other: single track or radio item
