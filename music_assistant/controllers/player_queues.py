@@ -41,7 +41,10 @@ from music_assistant_models.errors import (
     UnsupportedFeaturedException,
 )
 from music_assistant_models.media_items import (
+    BrowseFolder,
+    ItemMapping,
     MediaItemType,
+    MediaItemTypeOrItemMapping,
     PlayableMediaItemType,
     Playlist,
     PodcastEpisode,
@@ -1415,9 +1418,12 @@ class PlayerQueuesController(CoreController):
         )
 
     async def _resolve_media_items(
-        self, media_item: MediaItemType, start_item: str | None = None
+        self, media_item: MediaItemTypeOrItemMapping, start_item: str | None = None
     ) -> list[MediaItemType]:
         """Resolve/unwrap media items to enqueue."""
+        # resolve Itemmapping to full media item
+        if isinstance(media_item, ItemMapping):
+            media_item = await self.mass.music.get_item_by_uri(media_item.uri)
         if media_item.media_type == MediaType.PLAYLIST:
             self.mass.create_task(self.mass.music.mark_item_played(media_item))
             return await self.get_playlist_tracks(media_item, start_item)
@@ -1438,6 +1444,8 @@ class PlayerQueuesController(CoreController):
             return await self.get_next_podcast_episodes(media_item, start_item)
         if media_item.media_type == MediaType.PODCAST_EPISODE:
             return await self.get_next_podcast_episodes(None, media_item)
+        if media_item.media_type == MediaType.FOLDER:
+            return await self._get_folder_tracks(media_item)
         # all other: single track or radio item
         return [media_item]
 
@@ -1523,6 +1531,21 @@ class PlayerQueuesController(CoreController):
                 remaining_dynamic_tracks, min(len(remaining_dynamic_tracks), 25)
             )
         return queue_tracks
+
+    async def _get_folder_tracks(self, folder: BrowseFolder) -> list[Track]:
+        """Fetch (playable) tracks for given browse folder."""
+        self.logger.info(
+            "Fetching tracks to play for folder %s",
+            folder.name,
+        )
+        tracks: list[Track] = []
+        for item in await self.mass.music.browse(folder.path):
+            if not item.is_playable:
+                continue
+            # recursively fetch tracks from all media types
+            tracks += await self._resolve_media_items(item)
+
+        return tracks
 
     def _update_queue_from_player(
         self,

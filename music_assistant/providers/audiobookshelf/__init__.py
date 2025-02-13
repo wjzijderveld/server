@@ -26,7 +26,7 @@ from music_assistant_models.media_items import (
     ItemMapping,
     MediaItemChapter,
     MediaItemImage,
-    MediaItemType,
+    MediaItemTypeOrItemMapping,
     Podcast,
     PodcastEpisode,
     ProviderMapping,
@@ -563,13 +563,13 @@ class Audiobookshelf(MusicProvider):
 
     async def _browse_root(
         self, library_list: list[LibraryWithItemIDs], item_path: str
-    ) -> Sequence[MediaItemType | ItemMapping]:
+    ) -> Sequence[MediaItemTypeOrItemMapping]:
         """Browse root folder in browse view.
 
         Helper functions. Shows the library name, ABS supports multiple libraries
         of both podcasts and audiobooks.
         """
-        items: list[MediaItemType | ItemMapping] = []
+        items: list[MediaItemTypeOrItemMapping] = []
         for library in library_list:
             items.append(
                 BrowseFolder(
@@ -586,7 +586,7 @@ class Audiobookshelf(MusicProvider):
         library_id: str,
         library_list: list[LibraryWithItemIDs],
         media_type: MediaType,
-    ) -> Sequence[MediaItemType | ItemMapping]:
+    ) -> Sequence[MediaItemTypeOrItemMapping]:
         """Browse lib folder in browse view.
 
         Helper functions. Shows the items which are part of an ABS library.
@@ -598,7 +598,7 @@ class Audiobookshelf(MusicProvider):
         if library is None:
             raise MediaNotFoundError("Lib missing.")
 
-        items: list[MediaItemType | ItemMapping] = []
+        items: list[MediaItemTypeOrItemMapping] = []
         if media_type in [MediaType.PODCAST, MediaType.AUDIOBOOK]:
             for item_id in library.item_ids:
                 mass_item = await self.mass.music.get_library_item_by_prov_id(
@@ -612,7 +612,7 @@ class Audiobookshelf(MusicProvider):
             raise RuntimeError(f"Media type must not be {media_type}")
         return items
 
-    async def browse(self, path: str) -> Sequence[MediaItemType | ItemMapping]:
+    async def browse(self, path: str) -> Sequence[MediaItemTypeOrItemMapping]:
         """Browse features shows libraries names."""
         item_path = path.split("://", 1)[1]
         if not item_path:  # root
