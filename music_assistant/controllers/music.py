@@ -555,6 +555,7 @@ class MusicController(CoreController):
             provider_instance_id_or_domain=provider_instance_id_or_domain,
         )
 
+    @api_command("music/get_library_item")
     async def get_library_item_by_prov_id(
         self,
         media_type: MediaType,

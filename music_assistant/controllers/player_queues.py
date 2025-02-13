@@ -58,7 +58,7 @@ from music_assistant.constants import CONF_CROSSFADE, CONF_FLOW_MODE, MASS_LOGO_
 from music_assistant.helpers.api import api_command
 from music_assistant.helpers.audio import get_stream_details, get_stream_dsp_details
 from music_assistant.helpers.throttle_retry import BYPASS_THROTTLER
-from music_assistant.helpers.util import get_changed_keys
+from music_assistant.helpers.util import get_changed_keys, percentage
 from music_assistant.models.core_controller import CoreController
 
 if TYPE_CHECKING:
@@ -1839,45 +1839,59 @@ class PlayerQueuesController(CoreController):
         cur_item_id = new_state["current_item_id"]
         if prev_item_id is None and cur_item_id is None:
             return
+
         if prev_item_id is not None and prev_item_id != cur_item_id:
             # we have a new item, so we need report the previous one
+            is_current_item = False
             item_to_report = prev_state["current_item"]
             seconds_played = int(prev_state["elapsed_time"])
         else:
             # report on current item
+            is_current_item = True
             item_to_report = self.get_item(queue.queue_id, cur_item_id) or new_state["current_item"]
             if not item_to_report:
                 return  # guard against invalid items
             seconds_played = int(new_state["elapsed_time"])
-            if seconds_played < 10:
-                # ignore items that have been played less than 10 seconds
-                return
 
         if not item_to_report.media_item:
             # only report on media items
             return
 
         if item_to_report.streamdetails and item_to_report.streamdetails.duration:
-            duration = item_to_report.streamdetails.duration
+            duration = int(item_to_report.streamdetails.duration)
         else:
-            duration = item_to_report.duration or 3600
+            duration = int(item_to_report.duration or 3 * 3600)
+
+        if seconds_played < 5:
+            # ignore items that have been played less than 5 seconds
+            # this also filters out a bounce effect where the previous item
+            # gets reported with 0 elapsed seconds after a new item starts playing
+            return
 
         # determine if item is fully played
         # for podcasts and audiobooks we account for the last 60 seconds
-        if item_to_report.queue_item_id == prev_item_id and item_to_report.media_type in (
+        percentage_played = percentage(seconds_played, duration)
+        if not is_current_item and item_to_report.media_type in (
             MediaType.AUDIOBOOK,
             MediaType.PODCAST_EPISODE,
         ):
-            fully_played = seconds_played >= (duration or 3 * 3600) - 60
+            fully_played = seconds_played >= duration - 60
+        elif not is_current_item:
+            # 90% of the track must be played to be considered fully played
+            fully_played = percentage_played >= 90
         else:
-            fully_played = seconds_played >= (duration or 3600) - 10
+            fully_played = seconds_played >= duration - 10
 
         self.logger.debug(
-            "PlayerQueue %s playing/played item %s - fully_played: %s - progress: %s",
+            "%s %s '%s' (%s) - Fully played: %s - Progress: %s (%s/%ss)",
             queue.display_name,
+            "is playing" if (is_current_item and queue.state == PlayerState.PLAYING) else "played",
+            item_to_report.name,
             item_to_report.uri,
             fully_played,
+            f"{percentage_played}%",
             seconds_played,
+            duration,
         )
         # add entry to playlog - this also handles resume of podcasts/audiobooks
         self.mass.create_task(
