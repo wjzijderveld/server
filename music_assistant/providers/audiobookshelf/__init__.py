@@ -181,10 +181,10 @@ class Audiobookshelf(MusicProvider):
         # For streaming providers return True here but for local file based providers return False.
         return False
 
-    async def sync_library(self, media_types: tuple[MediaType, ...]) -> None:
+    async def sync_library(self, media_type: MediaType) -> None:
         """Run library sync for this provider."""
         await self._client.sync()
-        await super().sync_library(media_types=media_types)
+        await super().sync_library(media_type=media_type)
 
     def _parse_podcast(
         self, abs_podcast: ABSLibraryItemExpandedPodcast | ABSLibraryItemMinifiedPodcast
