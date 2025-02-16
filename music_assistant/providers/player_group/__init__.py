@@ -481,9 +481,22 @@ class PlayerGroupProvider(PlayerProvider):
                 output_format=UGP_FORMAT,
                 use_pre_announce=media.custom_data["use_pre_announce"],
             )
+        elif media.media_type == MediaType.PLUGIN_SOURCE:
+            # special case: plugin source stream
+            audio_source = self.mass.streams.get_plugin_source_stream(
+                plugin_source_id=media.custom_data["provider"],
+                output_format=UGP_FORMAT,
+                player_id=player_id,
+            )
+        elif media.media_type == MediaType.RADIO:
+            # use single item stream request for radio streams
+            audio_source = self.mass.streams.get_queue_item_stream(
+                queue_item=self.mass.player_queues.get_item(media.queue_id, media.queue_item_id),
+                pcm_format=UGP_FORMAT,
+            )
         elif media.queue_id and media.queue_item_id:
             # regular queue stream request
-            audio_source = self.mass.streams.get_flow_stream(
+            audio_source = self.mass.streams.get_queue_flow_stream(
                 queue=self.mass.player_queues.get(media.queue_id),
                 start_queue_item=self.mass.player_queues.get_item(
                     media.queue_id, media.queue_item_id

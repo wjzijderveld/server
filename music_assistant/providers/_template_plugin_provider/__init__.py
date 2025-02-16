@@ -38,7 +38,7 @@ from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
 from music_assistant_models.enums import ContentType, EventType, ProviderFeature
-from music_assistant_models.streamdetails import AudioFormat
+from music_assistant_models.media_items.audio_format import AudioFormat
 
 from music_assistant.models.plugin import PluginProvider, PluginSource
 
