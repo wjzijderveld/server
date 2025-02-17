@@ -1039,18 +1039,12 @@ class PlayerQueuesController(CoreController):
                 # Youtube Music has poor thumbs by default, so we always fetch the full item
                 # this also catches the case where they have an unavailable item in a listing
                 queue_item.media_item = await self.mass.music.get_item_by_uri(queue_item.uri)
-            # ensure we got the original album set
-            if (
-                album
-                and library_item
-                and library_item.album
-                and album.item_id != library_item.album.item_id
-                and (
-                    library_album := await self.mass.music.get_library_item_by_prov_id(
-                        album.media_type,
-                        album.item_id,
-                        album.provider,
-                    )
+            # ensure we got the full (original) album set
+            if album and (
+                library_album := await self.mass.music.get_library_item_by_prov_id(
+                    album.media_type,
+                    album.item_id,
+                    album.provider,
                 )
             ):
                 queue_item.media_item.album = library_album
