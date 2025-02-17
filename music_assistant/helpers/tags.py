@@ -392,10 +392,14 @@ class AudioTags:
             x for x in raw["streams"] if x.get("codec_name", "") in ("mjpeg", "png")
         )
         # convert all tag-keys (gathered from all streams) to lowercase without spaces
+        # prefer format as that contains the actual ID3 tags
+        # append any tags found in streams (but don't overwrite format tags)
         tags = {}
-        for stream in raw["streams"] + [raw["format"]]:
+        for stream in [raw["format"]] + raw["streams"]:
             for key, value in stream.get("tags", {}).items():
                 alt_key = key.lower().replace(" ", "").replace("_", "").replace("-", "")
+                if alt_key in tags:
+                    continue
                 tags[alt_key] = value
 
         return AudioTags(
