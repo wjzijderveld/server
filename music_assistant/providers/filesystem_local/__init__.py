@@ -187,10 +187,8 @@ class LocalFileSystemProvider(MusicProvider):
         return False
 
     @property
-    def name(self) -> str:
-        """Return (custom) friendly name for this provider instance."""
-        if self.config.name:
-            return self.config.name
+    def default_name(self) -> str:
+        """Return default name for this provider instance."""
         postfix = self.base_path.split(os.sep)[-1]
         return f"{self.manifest.name} {postfix}"
 
