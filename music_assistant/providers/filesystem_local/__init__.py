@@ -538,9 +538,12 @@ class LocalFileSystemProvider(MusicProvider):
             prov_artist_id, self.instance_id
         )
         if not db_artist:
-            # this should not be possible, but just in case
-            msg = f"Artist not found: {prov_artist_id}"
-            raise MediaNotFoundError(msg)
+            # this may happen if the artist is not in the db yet
+            # e.g. when browsing the filesystem
+            if await self.exists(prov_artist_id):
+                return await self._parse_artist(prov_artist_id, artist_path=prov_artist_id)
+            return await self._parse_artist(prov_artist_id)
+
         # prov_artist_id is either an actual (relative) path or a name (as fallback)
         safe_artist_name = create_safe_string(prov_artist_id, lowercase=False, replace_space=False)
         if await self.exists(prov_artist_id):
