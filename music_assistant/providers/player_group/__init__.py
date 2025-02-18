@@ -924,6 +924,8 @@ class PlayerGroupProvider(PlayerProvider):
         # Verify that no player is part of a separate group
         for child_player_id in player.group_childs:
             child_player = self.mass.players.get(child_player_id)
+            if child_player is None:
+                continue
             if PlayerFeature.SET_MEMBERS not in child_player.supported_features:
                 continue
             if child_player.group_childs:
