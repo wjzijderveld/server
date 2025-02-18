@@ -705,6 +705,7 @@ class PlayerGroupProvider(PlayerProvider):
             # this is the sync leader, unsync all its childs!
             # NOTE that some players/providers might support this in a less intrusive way
             # but for now we just ungroup all childs to keep thinngs universal
+            self.logger.info("Detected ungroup of sync leader, ungrouping all childs")
             async with TaskManager(self.mass) as tg:
                 for sync_child_id in child_player.group_childs:
                     if sync_child_id == child_player.player_id:
@@ -717,6 +718,7 @@ class PlayerGroupProvider(PlayerProvider):
 
         if is_sync_leader and was_playing and group_player.powered:
             # ungrouping the sync leader stops the group so we need to resume
+            self.logger.info("Resuming group after ungrouping of sync leader")
             task_id = f"resync_group_{group_player.player_id}"
             self.mass.call_later(
                 2, self.mass.players.cmd_play(group_player.player_id), task_id=task_id
