@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Awaitable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -58,7 +58,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueType] | None = None,
+    values: dict[str, ConfigValueTypes] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -85,10 +85,10 @@ async def get_config_entries(
             key=CONF_SXM_REGION,
             type=ConfigEntryType.STRING,
             default_value="US",
-            options=(
+            options=[
                 ConfigValueOption(title="United States", value="US"),
                 ConfigValueOption(title="Canada", value="CA"),
-            ),
+            ],
             label="Region",
             required=True,
         ),

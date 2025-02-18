@@ -24,7 +24,12 @@ from hass_client.utils import (
     get_token,
     get_websocket_url,
 )
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
+from music_assistant_models.config_entries import (
+    ConfigEntry,
+    ConfigValueOption,
+    ConfigValueTypes,
+    MultiValueConfigEntry,
+)
 from music_assistant_models.enums import ConfigEntryType
 from music_assistant_models.errors import LoginFailed, SetupFailedError
 from music_assistant_models.player_control import PlayerControl
@@ -65,7 +70,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueType] | None = None,
+    values: dict[str, ConfigValueTypes] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -143,7 +148,7 @@ async def get_config_entries(
                 label="URL",
                 required=True,
                 description="URL to your Home Assistant instance (e.g. http://192.168.1.1:8123)",
-                value=values.get(CONF_URL) if values else None,
+                value=cast(str, values.get(CONF_URL)) if values else None,
             ),
             ConfigEntry(
                 key=CONF_ACTION_AUTH,
@@ -162,7 +167,7 @@ async def get_config_entries(
                 description="You can either paste a Long Lived Token here manually or use the "
                 "'authenticate' button to generate a token for you with logging in.",
                 depends_on=CONF_URL,
-                value=values.get(CONF_AUTH_TOKEN) if values else None,
+                value=cast(str, values.get(CONF_AUTH_TOKEN)) if values else None,
                 category="advanced",
             ),
             ConfigEntry(
@@ -183,26 +188,23 @@ async def get_config_entries(
 
     return (
         *base_entries,
-        ConfigEntry(
+        MultiValueConfigEntry(
             key=CONF_POWER_CONTROLS,
             type=ConfigEntryType.STRING,
             label=CONF_POWER_CONTROLS,
             default_value=[],
-            multi_value=True,
         ),
-        ConfigEntry(
+        MultiValueConfigEntry(
             key=CONF_VOLUME_CONTROLS,
             type=ConfigEntryType.STRING,
             label=CONF_VOLUME_CONTROLS,
             default_value=[],
-            multi_value=True,
         ),
-        ConfigEntry(
+        MultiValueConfigEntry(
             key=CONF_MUTE_CONTROLS,
             type=ConfigEntryType.STRING,
             label=CONF_MUTE_CONTROLS,
             default_value=[],
-            multi_value=True,
         ),
     )
 
@@ -252,37 +254,34 @@ async def _get_player_control_config_entries(hass: HomeAssistantClient) -> tuple
     all_mute_entities.sort(key=lambda x: x.title)
     all_volume_entities.sort(key=lambda x: x.title)
     return (
-        ConfigEntry(
+        MultiValueConfigEntry(
             key=CONF_POWER_CONTROLS,
             type=ConfigEntryType.STRING,
             label="Player Power Control entities",
             required=True,
-            options=tuple(all_power_entities),
-            multi_value=True,
+            options=all_power_entities,
             default_value=[],
             description="Specify which Home Assistant entities you "
             "like to import as player Power controls in Music Assistant.",
             category="player_controls",
         ),
-        ConfigEntry(
+        MultiValueConfigEntry(
             key=CONF_VOLUME_CONTROLS,
             type=ConfigEntryType.STRING,
             label="Player Volume Control entities",
             required=True,
-            options=tuple(all_volume_entities),
-            multi_value=True,
+            options=all_volume_entities,
             default_value=[],
             description="Specify which Home Assistant entities you "
             "like to import as player Volume controls in Music Assistant.",
             category="player_controls",
         ),
-        ConfigEntry(
+        MultiValueConfigEntry(
             key=CONF_MUTE_CONTROLS,
             type=ConfigEntryType.STRING,
             label="Player Mute Control entities",
             required=True,
-            options=tuple(all_mute_entities),
-            multi_value=True,
+            options=all_mute_entities,
             default_value=[],
             description="Specify which Home Assistant entities you "
             "like to import as player Mute controls in Music Assistant.",

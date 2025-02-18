@@ -11,7 +11,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Iterator, MutableMapping
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes
 from music_assistant_models.enums import ConfigEntryType
 
 from music_assistant.constants import DB_TABLE_CACHE, DB_TABLE_SETTINGS, MASS_LOGGER_NAME
@@ -46,7 +46,7 @@ class CacheController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         if action == CONF_CLEAR_CACHE:
@@ -75,7 +75,8 @@ class CacheController(CoreController):
 
     async def close(self) -> None:
         """Cleanup on exit."""
-        await self.database.close()
+        if self.database:
+            await self.database.close()
 
     async def get(
         self,

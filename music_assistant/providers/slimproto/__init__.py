@@ -22,7 +22,7 @@ from aioslimproto.server import SlimServer
 from music_assistant_models.config_entries import (
     ConfigEntry,
     ConfigValueOption,
-    ConfigValueType,
+    ConfigValueTypes,
     PlayerConfig,
 )
 from music_assistant_models.enums import (
@@ -126,10 +126,10 @@ CONF_ENTRY_VISUALIZATION = ConfigEntry(
     key=CONF_VISUALIZATION,
     type=ConfigEntryType.STRING,
     default_value=DEFAULT_VISUALIZATION,
-    options=tuple(
+    options=[
         ConfigValueOption(title=x.name.replace("_", " ").title(), value=x.value)
         for x in SlimVisualisationType
-    ),
+    ],
     required=False,
     label="Visualization type",
     description="The type of visualization to show on the display "
@@ -150,7 +150,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueType] | None = None,
+    values: dict[str, ConfigValueTypes] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.

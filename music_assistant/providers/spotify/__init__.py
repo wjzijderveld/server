@@ -10,7 +10,7 @@ import time
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlencode
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes
 from music_assistant_models.enums import (
     AlbumType,
     ConfigEntryType,
@@ -125,7 +125,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueType] | None = None,
+    values: dict[str, ConfigValueTypes] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.

@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import aiofiles
 from aiohttp import web
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
 from music_assistant_models.enums import (
     AlbumType,
     ConfigEntryType,
@@ -131,7 +131,7 @@ class MetaDataController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         return (
@@ -144,7 +144,7 @@ class MetaDataController(CoreController):
                 description="Preferred language for metadata.\n\n"
                 "Note that English will always be used as fallback when content "
                 "in your preferred language is not available.",
-                options=tuple(ConfigValueOption(value, key) for key, value in LOCALES.items()),
+                options=[ConfigValueOption(value, key) for key, value in LOCALES.items()],
             ),
             ConfigEntry(
                 key=CONF_ENABLE_ONLINE_METADATA,

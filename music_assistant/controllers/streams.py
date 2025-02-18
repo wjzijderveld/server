@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 from aiofiles.os import wrap
 from aiohttp import web
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -115,7 +115,7 @@ class StreamsController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         default_ip = await get_ip()
@@ -136,10 +136,10 @@ class StreamsController(CoreController):
                 type=ConfigEntryType.STRING,
                 default_value=VolumeNormalizationMode.FALLBACK_DYNAMIC,
                 label="Volume normalization method for radio streams",
-                options=(
+                options=[
                     ConfigValueOption(x.value.replace("_", " ").title(), x.value)
                     for x in VolumeNormalizationMode
-                ),
+                ],
                 category="audio",
             ),
             ConfigEntry(
@@ -147,10 +147,10 @@ class StreamsController(CoreController):
                 type=ConfigEntryType.STRING,
                 default_value=VolumeNormalizationMode.FALLBACK_DYNAMIC,
                 label="Volume normalization method for tracks",
-                options=(
+                options=[
                     ConfigValueOption(x.value.replace("_", " ").title(), x.value)
                     for x in VolumeNormalizationMode
-                ),
+                ],
                 category="audio",
             ),
             ConfigEntry(
@@ -187,7 +187,7 @@ class StreamsController(CoreController):
                 key=CONF_BIND_IP,
                 type=ConfigEntryType.STRING,
                 default_value="0.0.0.0",
-                options=(ConfigValueOption(x, x) for x in {"0.0.0.0", *all_ips}),
+                options=[ConfigValueOption(x, x) for x in {"0.0.0.0", *all_ips}],
                 label="Bind to IP/interface",
                 description="Start the stream server on this specific interface. \n"
                 "Use 0.0.0.0 to bind to all interfaces, which is the default. \n"

@@ -39,7 +39,7 @@ from music_assistant.models.core_controller import CoreController
 if TYPE_CHECKING:
     from collections.abc import Awaitable
 
-    from music_assistant_models.config_entries import ConfigValueType, CoreConfig
+    from music_assistant_models.config_entries import ConfigValueTypes, CoreConfig
     from music_assistant_models.event import MassEvent
 
 DEFAULT_SERVER_PORT = 8095
@@ -73,7 +73,7 @@ class WebserverController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         default_publish_ip = await get_ip()
@@ -122,7 +122,7 @@ class WebserverController(CoreController):
                 key=CONF_BIND_IP,
                 type=ConfigEntryType.STRING,
                 default_value="0.0.0.0",
-                options=(ConfigValueOption(x, x) for x in {"0.0.0.0", *all_ips}),
+                options=[ConfigValueOption(x, x) for x in {"0.0.0.0", *all_ips}],
                 label="Bind to IP/interface",
                 description="Start the (web)server on this specific interface. \n"
                 "Use 0.0.0.0 to bind to all interfaces. \n"

@@ -13,7 +13,7 @@ from contextlib import suppress
 from typing import TYPE_CHECKING, Final, cast
 
 from bidict import bidict
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -114,7 +114,7 @@ async def get_config_entries(
     mass: MusicAssistant,  # noqa: ARG001
     instance_id: str | None = None,  # noqa: ARG001
     action: str | None = None,  # noqa: ARG001
-    values: dict[str, ConfigValueType] | None = None,  # noqa: ARG001
+    values: dict[str, ConfigValueTypes] | None = None,  # noqa: ARG001
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -176,7 +176,7 @@ async def get_config_entries(
         ConfigEntry(
             key=CONF_SERVER_TRANSPORT_CODEC,
             type=ConfigEntryType.STRING,
-            options=(
+            options=[
                 ConfigValueOption(
                     title="FLAC",
                     value="flac",
@@ -193,7 +193,7 @@ async def get_config_entries(
                     title="PCM",
                     value="pcm",
                 ),
-            ),
+            ],
             default_value="flac",
             label="Snapserver default transport codec",
             required=False,

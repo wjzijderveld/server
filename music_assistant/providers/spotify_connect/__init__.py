@@ -35,7 +35,7 @@ from music_assistant.providers.spotify.helpers import get_librespot_binary
 
 if TYPE_CHECKING:
     from aiohttp.web import Request
-    from music_assistant_models.config_entries import ConfigValueType, ProviderConfig
+    from music_assistant_models.config_entries import ConfigValueTypes, ProviderConfig
     from music_assistant_models.event import MassEvent
     from music_assistant_models.provider import ProviderManifest
 
@@ -60,7 +60,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,  # noqa: ARG001
     action: str | None = None,  # noqa: ARG001
-    values: dict[str, ConfigValueType] | None = None,  # noqa: ARG001
+    values: dict[str, ConfigValueTypes] | None = None,  # noqa: ARG001
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -77,10 +77,10 @@ async def get_config_entries(
             label="Connected Music Assistant Player",
             description="Select the player for which you want to enable Spotify Connect.",
             multi_value=False,
-            options=tuple(
+            options=[
                 ConfigValueOption(x.display_name, x.player_id)
                 for x in mass.players.all(False, False)
-            ),
+            ],
             required=True,
         ),
         # ConfigEntry(

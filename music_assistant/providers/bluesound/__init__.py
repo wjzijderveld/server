@@ -28,7 +28,7 @@ from music_assistant.helpers.util import (
 from music_assistant.models.player_provider import PlayerProvider
 
 if TYPE_CHECKING:
-    from music_assistant_models.config_entries import ConfigEntry, ConfigValueType, ProviderConfig
+    from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes, ProviderConfig
     from music_assistant_models.provider import ProviderManifest
     from zeroconf.asyncio import AsyncServiceInfo
 
@@ -78,7 +78,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueType] | None = None,
+    values: dict[str, ConfigValueTypes] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """Set up legacy BluOS devices."""
     # ruff: noqa: ARG001

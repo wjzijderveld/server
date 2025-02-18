@@ -11,7 +11,7 @@ import deezer
 from aiohttp import ClientSession, ClientTimeout
 from Crypto.Cipher import Blowfish
 from deezer import exceptions as deezer_exceptions
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueType, ProviderConfig
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes, ProviderConfig
 from music_assistant_models.enums import (
     AlbumType,
     ConfigEntryType,
@@ -122,7 +122,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,  # noqa: ARG001
     action: str | None = None,
-    values: dict[str, ConfigValueType] | None = None,
+    values: dict[str, ConfigValueTypes] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """Return Config entries to setup this provider."""
     # Action is to launch oauth flow

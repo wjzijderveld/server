@@ -19,7 +19,7 @@ import time
 from types import NoneType
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
 from music_assistant_models.enums import (
     CacheCategory,
     ConfigEntryType,
@@ -139,17 +139,17 @@ class PlayerQueuesController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
-        enqueue_options = tuple(ConfigValueOption(x.name, x.value) for x in QueueOption)
+        enqueue_options = [ConfigValueOption(x.name, x.value) for x in QueueOption]
         return (
             ConfigEntry(
                 key=CONF_DEFAULT_ENQUEUE_SELECT_ARTIST,
                 type=ConfigEntryType.STRING,
                 default_value=ENQUEUE_SELECT_ARTIST_DEFAULT_VALUE,
                 label="Items to select when you play a (in-library) artist.",
-                options=(
+                options=[
                     ConfigValueOption(
                         title="Only in-library tracks",
                         value="library_tracks",
@@ -166,14 +166,14 @@ class PlayerQueuesController(CoreController):
                         title="All tracks from all albums from (all) streaming provider(s)",
                         value="all_album_tracks",
                     ),
-                ),
+                ],
             ),
             ConfigEntry(
                 key=CONF_DEFAULT_ENQUEUE_SELECT_ALBUM,
                 type=ConfigEntryType.STRING,
                 default_value=ENQUEUE_SELECT_ALBUM_DEFAULT_VALUE,
                 label="Items to select when you play a (in-library) album.",
-                options=(
+                options=[
                     ConfigValueOption(
                         title="Only in-library tracks",
                         value="library_tracks",
@@ -182,7 +182,7 @@ class PlayerQueuesController(CoreController):
                         title="All tracks for album on (streaming) provider",
                         value="all_tracks",
                     ),
-                ),
+                ],
             ),
             ConfigEntry(
                 key=CONF_DEFAULT_ENQUEUE_OPTION_ARTIST,

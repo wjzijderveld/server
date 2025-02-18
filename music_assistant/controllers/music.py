@@ -11,7 +11,7 @@ from itertools import zip_longest
 from math import inf
 from typing import TYPE_CHECKING, Final, cast
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes
 from music_assistant_models.enums import (
     CacheCategory,
     ConfigEntryType,
@@ -113,7 +113,7 @@ class MusicController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         entries = (

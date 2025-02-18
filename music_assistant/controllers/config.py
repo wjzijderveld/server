@@ -16,7 +16,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from music_assistant_models import config_entries
 from music_assistant_models.config_entries import (
     ConfigEntry,
-    ConfigValueType,
+    ConfigValueTypes,
     CoreConfig,
     PlayerConfig,
     ProviderConfig,
@@ -77,7 +77,7 @@ class ConfigController:
         self._data: dict[str, Any] = {}
         self.filename = os.path.join(self.mass.storage_path, "settings.json")
         self._timer_handle: asyncio.TimerHandle | None = None
-        self._value_cache: dict[str, ConfigValueType] = {}
+        self._value_cache: dict[str, ConfigValueTypes] = {}
 
     async def setup(self) -> None:
         """Async initialize of controller."""
@@ -208,7 +208,7 @@ class ConfigController:
         raise KeyError(msg)
 
     @api_command("config/providers/get_value")
-    async def get_provider_config_value(self, instance_id: str, key: str) -> ConfigValueType:
+    async def get_provider_config_value(self, instance_id: str, key: str) -> ConfigValueTypes:
         """Return single configentry value for a provider."""
         cache_key = f"prov_conf_value_{instance_id}.{key}"
         if (cached_value := self._value_cache.get(cache_key)) is not None:
@@ -229,7 +229,7 @@ class ConfigController:
         provider_domain: str,
         instance_id: str | None = None,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """
         Return Config entries to setup/configure a provider.
@@ -261,7 +261,7 @@ class ConfigController:
     async def save_provider_config(
         self,
         provider_domain: str,
-        values: dict[str, ConfigValueType],
+        values: dict[str, ConfigValueTypes],
         instance_id: str | None = None,
     ) -> ProviderConfig:
         """
@@ -356,7 +356,7 @@ class ConfigController:
         self,
         player_id: str,
         key: str,
-    ) -> ConfigValueType:
+    ) -> ConfigValueTypes:
         """Return single configentry value for a player."""
         conf = await self.get_player_config(player_id)
         return (
@@ -366,8 +366,8 @@ class ConfigController:
         )
 
     def get_raw_player_config_value(
-        self, player_id: str, key: str, default: ConfigValueType = None
-    ) -> ConfigValueType:
+        self, player_id: str, key: str, default: ConfigValueTypes = None
+    ) -> ConfigValueTypes:
         """
         Return (raw) single configentry value for a player.
 
@@ -380,7 +380,7 @@ class ConfigController:
 
     @api_command("config/players/save")
     async def save_player_config(
-        self, player_id: str, values: dict[str, ConfigValueType]
+        self, player_id: str, values: dict[str, ConfigValueTypes]
     ) -> PlayerConfig:
         """Save/update PlayerConfig."""
         config = await self.get_player_config(player_id)
@@ -513,7 +513,7 @@ class ConfigController:
         provider: str,
         name: str,
         enabled: bool,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> None:
         """
         Create default/empty PlayerConfig.
@@ -600,7 +600,7 @@ class ConfigController:
         return CoreConfig.parse(config_entries, raw_conf)
 
     @api_command("config/core/get_value")
-    async def get_core_config_value(self, domain: str, key: str) -> ConfigValueType:
+    async def get_core_config_value(self, domain: str, key: str) -> ConfigValueTypes:
         """Return single configentry value for a core controller."""
         conf = await self.get_core_config(domain)
         return (
@@ -614,7 +614,7 @@ class ConfigController:
         self,
         domain: str,
         action: str | None = None,
-        values: dict[str, ConfigValueType] | None = None,
+        values: dict[str, ConfigValueTypes] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """
         Return Config entries to configure a core controller.
@@ -635,7 +635,7 @@ class ConfigController:
     async def save_core_config(
         self,
         domain: str,
-        values: dict[str, ConfigValueType],
+        values: dict[str, ConfigValueTypes],
     ) -> CoreConfig:
         """Save CoreController Config values."""
         config = await self.get_core_config(domain)
@@ -656,8 +656,8 @@ class ConfigController:
         return await self.get_core_config(domain)
 
     def get_raw_core_config_value(
-        self, core_module: str, key: str, default: ConfigValueType = None
-    ) -> ConfigValueType:
+        self, core_module: str, key: str, default: ConfigValueTypes = None
+    ) -> ConfigValueTypes:
         """
         Return (raw) single configentry value for a core controller.
 
@@ -669,8 +669,8 @@ class ConfigController:
         )
 
     def get_raw_provider_config_value(
-        self, provider_instance: str, key: str, default: ConfigValueType = None
-    ) -> ConfigValueType:
+        self, provider_instance: str, key: str, default: ConfigValueTypes = None
+    ) -> ConfigValueTypes:
         """
         Return (raw) single config(entry) value for a provider.
 
@@ -685,7 +685,7 @@ class ConfigController:
         self,
         provider_instance: str,
         key: str,
-        value: ConfigValueType,
+        value: ConfigValueTypes,
         encrypted: bool = False,
     ) -> None:
         """
@@ -707,7 +707,9 @@ class ConfigController:
         if prov := self.mass.get_provider(provider_instance, return_unavailable=True):
             prov.config.values[key].value = value
 
-    def set_raw_core_config_value(self, core_module: str, key: str, value: ConfigValueType) -> None:
+    def set_raw_core_config_value(
+        self, core_module: str, key: str, value: ConfigValueTypes
+    ) -> None:
         """
         Set (raw) single config(entry) value for a core controller.
 
@@ -718,7 +720,9 @@ class ConfigController:
             self.set(f"{CONF_CORE}/{core_module}", CoreConfig({}, core_module).to_raw())
         self.set(f"{CONF_CORE}/{core_module}/values/{key}", value)
 
-    def set_raw_player_config_value(self, player_id: str, key: str, value: ConfigValueType) -> None:
+    def set_raw_player_config_value(
+        self, player_id: str, key: str, value: ConfigValueTypes
+    ) -> None:
         """
         Set (raw) single config(entry) value for a player.
 
@@ -821,7 +825,7 @@ class ConfigController:
         await self.mass.load_provider_config(config)
 
     async def _update_provider_config(
-        self, instance_id: str, values: dict[str, ConfigValueType]
+        self, instance_id: str, values: dict[str, ConfigValueTypes]
     ) -> ProviderConfig:
         """Update ProviderConfig."""
         config = await self.get_provider_config(instance_id)
@@ -861,7 +865,7 @@ class ConfigController:
     async def _add_provider_config(
         self,
         provider_domain: str,
-        values: dict[str, ConfigValueType],
+        values: dict[str, ConfigValueTypes],
     ) -> list[ConfigEntry] | ProviderConfig:
         """
         Add new Provider (instance).

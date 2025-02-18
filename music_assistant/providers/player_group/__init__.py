@@ -18,7 +18,8 @@ from aiohttp import web
 from music_assistant_models.config_entries import (
     ConfigEntry,
     ConfigValueOption,
-    ConfigValueType,
+    ConfigValueTypes,
+    MultiValueConfigEntry,
     PlayerConfig,
 )
 from music_assistant_models.constants import PLAYER_CONTROL_NATIVE, PLAYER_CONTROL_NONE
@@ -100,13 +101,12 @@ CONF_ENTRY_GROUP_TYPE = ConfigEntry(
     hidden=True,
     required=True,
 )
-CONF_ENTRY_GROUP_MEMBERS = ConfigEntry(
+CONF_ENTRY_GROUP_MEMBERS = MultiValueConfigEntry(
     key=CONF_GROUP_MEMBERS,
     type=ConfigEntryType.STRING,
     label="Group members",
     default_value=[],
     description="Select all players you want to be part of this group",
-    multi_value=True,
     required=False,  # otherwise dynamic members won't work (which allows empty members list)
 )
 CONF_ENTRY_SAMPLE_RATES_UGP = create_sample_rates_config_entry(44100, 16, 44100, 16, True)
@@ -143,7 +143,7 @@ async def get_config_entries(
     mass: MusicAssistant,  # noqa: ARG001
     instance_id: str | None = None,  # noqa: ARG001
     action: str | None = None,  # noqa: ARG001
-    values: dict[str, ConfigValueType] | None = None,  # noqa: ARG001
+    values: dict[str, ConfigValueTypes] | None = None,  # noqa: ARG001
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
