@@ -57,7 +57,7 @@ def split_artists(
     org_artists: str | tuple[str, ...], allow_ampersand: bool = False
 ) -> tuple[str, ...]:
     """Parse all artists from a string."""
-    final_artists = set()
+    final_artists: list[str] = []
     # when not using the multi artist tag, the artist string may contain
     # multiple artists in freeform, even featuring artists may be included in this
     # string. Try to parse the featuring artists and separate them.
@@ -70,7 +70,9 @@ def split_artists(
             if splitter not in item:
                 continue
             for subitem in item.split(splitter):
-                final_artists.add(subitem.strip())
+                clean_item = subitem.strip()
+                if clean_item and clean_item not in final_artists:
+                    final_artists.append(subitem.strip())
     if not final_artists:
         # none of the extra splitters was found
         return artists
