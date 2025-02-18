@@ -43,7 +43,7 @@ from music_assistant.models.player_provider import PlayerProvider
 if TYPE_CHECKING:
     from music_assistant_models.config_entries import (
         ConfigEntry,
-        ConfigValueTypes,
+        ConfigValueType,
         PlayerConfig,
         ProviderConfig,
     )
@@ -68,7 +68,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -79,9 +79,9 @@ async def get_config_entries(
     """
     # ruff: noqa: ARG001
     # Config Entries are used to configure the Player Provider if needed.
-    # See the models of ConfigEntry and ConfigValueTypes for more information what is supported.
+    # See the models of ConfigEntry and ConfigValueType for more information what is supported.
     # The ConfigEntry is a dataclass that represents a single configuration entry.
-    # The ConfigValueTypes is an Enum that represents the type of value that
+    # The ConfigValueType is an Enum that represents the type of value that
     # can be stored in a ConfigEntry.
     # If your provider does not need any configuration, you can return an empty tuple.
     return ()

@@ -11,7 +11,7 @@ from itertools import zip_longest
 from math import inf
 from typing import TYPE_CHECKING, Final, cast
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
 from music_assistant_models.enums import (
     CacheCategory,
     ConfigEntryType,
@@ -113,7 +113,7 @@ class MusicController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueTypes] | None = None,
+        values: dict[str, ConfigValueType] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         entries = (
@@ -1048,6 +1048,8 @@ class MusicController(CoreController):
         if provider_instance.startswith(("filesystem", "jellyfin", "plex", "opensubsonic")):
             # removal of a local provider can become messy very fast due to the relations
             # such as images pointing at the files etc. so we just reset the whole db
+            # TODO: Handle this more gracefully in the future where we remove the provider
+            # and traverse the database to also remove all related items.
             self.logger.warning(
                 "Removal of local provider detected, issuing full database reset..."
             )

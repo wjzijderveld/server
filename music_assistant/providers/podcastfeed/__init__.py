@@ -14,7 +14,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING
 
 import podcastparser
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -63,7 +63,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.

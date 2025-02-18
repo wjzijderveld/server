@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Sequence
 from typing import TYPE_CHECKING, cast
 
-from music_assistant_models.config_entries import ConfigEntry, MultiValueConfigEntry
+from music_assistant_models.config_entries import ConfigEntry
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -44,7 +44,7 @@ SUPPORTED_FEATURES = {
 }
 
 if TYPE_CHECKING:
-    from music_assistant_models.config_entries import ConfigValueTypes, ProviderConfig
+    from music_assistant_models.config_entries import ConfigValueType, ProviderConfig
     from music_assistant_models.provider import ProviderManifest
 
     from music_assistant.mass import MusicAssistant
@@ -64,7 +64,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -74,12 +74,13 @@ async def get_config_entries(
     """
     # ruff: noqa: ARG001 D205
     return (
-        MultiValueConfigEntry(
+        ConfigEntry(
             # RadioBrowser doesn't support a library feature at all
             # but MA users like to favorite their radio stations and
             # have that included in backups so we store it in the config.
             key=CONF_STORED_RADIOS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label=CONF_STORED_RADIOS,
             default_value=[],
             required=False,

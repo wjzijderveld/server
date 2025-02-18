@@ -8,7 +8,7 @@ import time
 from typing import TYPE_CHECKING
 
 from fullykiosk import FullyKiosk
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueType
 from music_assistant_models.enums import ConfigEntryType, PlayerFeature, PlayerState, PlayerType
 from music_assistant_models.errors import PlayerUnavailableError, SetupFailedError
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
@@ -47,7 +47,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.

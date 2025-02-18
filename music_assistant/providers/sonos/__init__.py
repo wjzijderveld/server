@@ -17,7 +17,7 @@ from music_assistant.constants import VERBOSE_LOG_LEVEL
 from .provider import CONF_IPS, SonosPlayerProvider
 
 if TYPE_CHECKING:
-    from music_assistant_models.config_entries import ConfigValueTypes, ProviderConfig
+    from music_assistant_models.config_entries import ConfigValueType, ProviderConfig
     from music_assistant_models.provider import ProviderManifest
 
     from music_assistant import MusicAssistant
@@ -41,7 +41,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.

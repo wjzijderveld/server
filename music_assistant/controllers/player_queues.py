@@ -19,7 +19,7 @@ import time
 from types import NoneType
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
     CacheCategory,
     ConfigEntryType,
@@ -139,7 +139,7 @@ class PlayerQueuesController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueTypes] | None = None,
+        values: dict[str, ConfigValueType] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         enqueue_options = [ConfigValueOption(x.name, x.value) for x in QueueOption]

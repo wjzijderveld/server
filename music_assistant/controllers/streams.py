@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 from aiofiles.os import wrap
 from aiohttp import web
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
     ConfigEntryType,
     ContentType,
@@ -115,7 +115,7 @@ class StreamsController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueTypes] | None = None,
+        values: dict[str, ConfigValueType] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         default_ip = await get_ip()
@@ -1006,11 +1006,14 @@ class StreamsController(CoreController):
     ) -> AudioFormat:
         """Parse (player specific) output format details for given format string."""
         content_type: ContentType = ContentType.try_parse(output_format_str)
-        supported_rates_conf = await self.mass.config.get_player_config_value(
-            player.player_id, CONF_SAMPLE_RATES
+        supported_rates_conf: list[
+            tuple[str, str]
+        ] = await self.mass.config.get_player_config_value(
+            player.player_id, CONF_SAMPLE_RATES, unpack_splitted_values=True
         )
-        supported_sample_rates: tuple[int] = tuple(x[0] for x in supported_rates_conf)
-        supported_bit_depths: tuple[int] = tuple(x[1] for x in supported_rates_conf)
+        supported_sample_rates: tuple[int] = tuple(int(x[0]) for x in supported_rates_conf)
+        supported_bit_depths: tuple[int] = tuple(int(x[1]) for x in supported_rates_conf)
+
         player_max_bit_depth = max(supported_bit_depths)
         if content_type.is_pcm() or content_type == ContentType.WAV:
             # parse pcm details from format string
@@ -1046,10 +1049,12 @@ class StreamsController(CoreController):
         player: Player,
     ) -> AudioFormat:
         """Parse (player specific) flow stream PCM format."""
-        supported_rates_conf = await self.mass.config.get_player_config_value(
-            player.player_id, CONF_SAMPLE_RATES
+        supported_rates_conf: list[
+            tuple[str, str]
+        ] = await self.mass.config.get_player_config_value(
+            player.player_id, CONF_SAMPLE_RATES, unpack_splitted_values=True
         )
-        supported_sample_rates: tuple[int] = tuple(x[0] for x in supported_rates_conf)
+        supported_sample_rates: tuple[int] = tuple(int(x[0]) for x in supported_rates_conf)
         output_sample_rate = DEFAULT_PCM_FORMAT.sample_rate
         for sample_rate in (192000, 96000, 48000, 44100):
             if sample_rate in supported_sample_rates:

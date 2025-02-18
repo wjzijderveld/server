@@ -14,7 +14,7 @@ import requests
 from music_assistant_models.config_entries import (
     ConfigEntry,
     ConfigValueOption,
-    ConfigValueTypes,
+    ConfigValueType,
     ProviderConfig,
 )
 from music_assistant_models.enums import (
@@ -105,7 +105,7 @@ async def get_config_entries(  # noqa: PLR0915
     mass: MusicAssistant,
     instance_id: str | None = None,  # noqa: ARG001
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.

@@ -12,12 +12,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from hass_client.exceptions import FailedCommand
-from music_assistant_models.config_entries import (
-    ConfigEntry,
-    ConfigValueOption,
-    ConfigValueTypes,
-    MultiValueConfigEntry,
-)
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import ConfigEntryType, PlayerFeature, PlayerState, PlayerType
 from music_assistant_models.errors import SetupFailedError
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
@@ -129,7 +124,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,  # noqa: ARG001
     action: str | None = None,  # noqa: ARG001
-    values: dict[str, ConfigValueTypes] | None = None,  # noqa: ARG001
+    values: dict[str, ConfigValueType] | None = None,  # noqa: ARG001
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -145,9 +140,10 @@ async def get_config_entries(
             name = f"{state['attributes']['friendly_name']} ({state['entity_id']})"
             player_entities.append(ConfigValueOption(name, state["entity_id"]))
     return (
-        MultiValueConfigEntry(
+        ConfigEntry(
             key=CONF_PLAYERS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label="Player entities",
             required=True,
             options=player_entities,

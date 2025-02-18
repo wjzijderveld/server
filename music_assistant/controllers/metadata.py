@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import aiofiles
 from aiohttp import web
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
     AlbumType,
     ConfigEntryType,
@@ -131,7 +131,7 @@ class MetaDataController(CoreController):
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueTypes] | None = None,
+        values: dict[str, ConfigValueType] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         return (

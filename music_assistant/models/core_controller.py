@@ -11,7 +11,7 @@ from music_assistant_models.provider import ProviderManifest
 from music_assistant.constants import CONF_LOG_LEVEL, MASS_LOGGER_NAME
 
 if TYPE_CHECKING:
-    from music_assistant_models.config_entries import ConfigEntry, ConfigValueTypes, CoreConfig
+    from music_assistant_models.config_entries import ConfigEntry, ConfigValueType, CoreConfig
 
     from music_assistant import MusicAssistant
 
@@ -38,7 +38,7 @@ class CoreController:
     async def get_config_entries(
         self,
         action: str | None = None,
-        values: dict[str, ConfigValueTypes] | None = None,
+        values: dict[str, ConfigValueType] | None = None,
     ) -> tuple[ConfigEntry, ...]:
         """Return all Config Entries for this core module (if any)."""
         return ()

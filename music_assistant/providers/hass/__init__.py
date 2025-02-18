@@ -24,12 +24,7 @@ from hass_client.utils import (
     get_token,
     get_websocket_url,
 )
-from music_assistant_models.config_entries import (
-    ConfigEntry,
-    ConfigValueOption,
-    ConfigValueTypes,
-    MultiValueConfigEntry,
-)
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import ConfigEntryType
 from music_assistant_models.errors import LoginFailed, SetupFailedError
 from music_assistant_models.player_control import PlayerControl
@@ -70,7 +65,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
@@ -188,21 +183,24 @@ async def get_config_entries(
 
     return (
         *base_entries,
-        MultiValueConfigEntry(
+        ConfigEntry(
             key=CONF_POWER_CONTROLS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label=CONF_POWER_CONTROLS,
             default_value=[],
         ),
-        MultiValueConfigEntry(
+        ConfigEntry(
             key=CONF_VOLUME_CONTROLS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label=CONF_VOLUME_CONTROLS,
             default_value=[],
         ),
-        MultiValueConfigEntry(
+        ConfigEntry(
             key=CONF_MUTE_CONTROLS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label=CONF_MUTE_CONTROLS,
             default_value=[],
         ),
@@ -254,9 +252,10 @@ async def _get_player_control_config_entries(hass: HomeAssistantClient) -> tuple
     all_mute_entities.sort(key=lambda x: x.title)
     all_volume_entities.sort(key=lambda x: x.title)
     return (
-        MultiValueConfigEntry(
+        ConfigEntry(
             key=CONF_POWER_CONTROLS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label="Player Power Control entities",
             required=True,
             options=all_power_entities,
@@ -265,9 +264,10 @@ async def _get_player_control_config_entries(hass: HomeAssistantClient) -> tuple
             "like to import as player Power controls in Music Assistant.",
             category="player_controls",
         ),
-        MultiValueConfigEntry(
+        ConfigEntry(
             key=CONF_VOLUME_CONTROLS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label="Player Volume Control entities",
             required=True,
             options=all_volume_entities,
@@ -276,9 +276,10 @@ async def _get_player_control_config_entries(hass: HomeAssistantClient) -> tuple
             "like to import as player Volume controls in Music Assistant.",
             category="player_controls",
         ),
-        MultiValueConfigEntry(
+        ConfigEntry(
             key=CONF_MUTE_CONTROLS,
             type=ConfigEntryType.STRING,
+            multi_value=True,
             label="Player Mute Control entities",
             required=True,
             options=all_mute_entities,

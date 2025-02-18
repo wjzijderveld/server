@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast
 
-from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueTypes
+from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
     AlbumType,
     CacheCategory,
@@ -165,7 +165,7 @@ async def get_config_entries(
     mass: MusicAssistant,
     instance_id: str | None = None,  # noqa: ARG001
     action: str | None = None,
-    values: dict[str, ConfigValueTypes] | None = None,
+    values: dict[str, ConfigValueType] | None = None,
 ) -> tuple[ConfigEntry, ...]:
     """
     Return Config entries to setup this provider.
