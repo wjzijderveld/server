@@ -811,9 +811,11 @@ class MediaControllerBase(Generic[ItemCls, LibraryUpdate], metaclass=ABCMeta):
                 if album_thumb:
                     # copy album image to itemmapping single image
                     db_row_dict["image"] = album_thumb
-                    if db_row_dict.get("metadata") and db_row_dict["metadata"].get("images"):
+                    if db_row_dict["metadata"].get("images"):
                         db_row_dict["metadata"]["images"] = [
                             album_thumb,
                             *db_row_dict["metadata"]["images"],
                         ]
+                    else:
+                        db_row_dict["metadata"]["images"] = [album_thumb]
         return db_row_dict
