@@ -21,7 +21,6 @@ from music_assistant_models.media_items import (
     Album,
     ItemMapping,
     MediaItemType,
-    MediaItemTypeOrItemMapping,
     ProviderMapping,
     SearchResults,
     Track,
@@ -36,9 +35,9 @@ if TYPE_CHECKING:
 
     from music_assistant import MusicAssistant
 
-MediaItemTypeBound = MediaItemTypeOrItemMapping
+
 ItemCls = TypeVar("ItemCls", bound="MediaItemType")
-LibraryUpdate = TypeVar("LibraryUpdate", bound="MediaItemTypeBound")
+
 
 JSON_KEYS = (
     "artists",
@@ -74,7 +73,7 @@ SORT_KEYS = {
 }
 
 
-class MediaControllerBase(Generic[ItemCls, LibraryUpdate], metaclass=ABCMeta):
+class MediaControllerBase(Generic[ItemCls], metaclass=ABCMeta):
     """Base model for controller managing a MediaType."""
 
     media_type: MediaType
@@ -161,7 +160,7 @@ class MediaControllerBase(Generic[ItemCls, LibraryUpdate], metaclass=ABCMeta):
         return None
 
     async def update_item_in_library(
-        self, item_id: str | int, update: LibraryUpdate, overwrite: bool = False
+        self, item_id: str | int, update: ItemCls, overwrite: bool = False
     ) -> ItemCls:
         """Update existing library record in the library database."""
         await self._update_library_item(item_id, update, overwrite=overwrite)
