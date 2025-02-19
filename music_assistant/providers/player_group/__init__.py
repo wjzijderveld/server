@@ -564,7 +564,8 @@ class PlayerGroupProvider(PlayerProvider):
         """
         if group_player := self.mass.players.get(player_id):
             self._update_attributes(group_player)
-            await self._ungroup_subgroups_if_found(group_player)
+            if group_player.powered:
+                await self._ungroup_subgroups_if_found(group_player)
 
     async def create_group(
         self, group_type: str, name: str, members: list[str], dynamic: bool = False
