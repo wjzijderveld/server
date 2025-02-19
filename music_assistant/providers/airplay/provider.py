@@ -113,7 +113,9 @@ PLAYER_CONFIG_ENTRIES = (
         range=(500, 3000),
     ),
     # airplay has fixed sample rate/bit depth so make this config entry static and hidden
-    create_sample_rates_config_entry(44100, 16, 44100, 16, True),
+    create_sample_rates_config_entry(
+        supported_sample_rates=[44100], supported_bit_depths=[16], hidden=True
+    ),
     ConfigEntry(
         key=CONF_IGNORE_VOLUME,
         type=ConfigEntryType.BOOLEAN,

@@ -109,7 +109,9 @@ CONF_ENTRY_GROUP_MEMBERS = ConfigEntry(
     description="Select all players you want to be part of this group",
     required=False,  # otherwise dynamic members won't work (which allows empty members list)
 )
-CONF_ENTRY_SAMPLE_RATES_UGP = create_sample_rates_config_entry(44100, 16, 44100, 16, True)
+CONF_ENTRY_SAMPLE_RATES_UGP = create_sample_rates_config_entry(
+    max_sample_rate=96000, max_bit_depth=24, hidden=True
+)
 CONFIG_ENTRY_UGP_NOTE = ConfigEntry(
     key="ugp_note",
     type=ConfigEntryType.LABEL,

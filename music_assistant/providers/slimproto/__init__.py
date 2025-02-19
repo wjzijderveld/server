@@ -316,7 +316,9 @@ class SlimprotoProvider(PlayerProvider):
                 CONF_ENTRY_DISPLAY,
                 CONF_ENTRY_VISUALIZATION,
                 CONF_ENTRY_HTTP_PROFILE_FORCED_2,
-                create_sample_rates_config_entry(max_sample_rate, 24, 48000, 24),
+                create_sample_rates_config_entry(
+                    max_sample_rate=max_sample_rate, max_bit_depth=24, safe_max_bit_depth=24
+                ),
             )
         )
 

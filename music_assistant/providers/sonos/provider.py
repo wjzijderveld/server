@@ -157,7 +157,9 @@ class SonosPlayerProvider(PlayerProvider):
             CONF_ENTRY_CROSSFADE,
             CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
             CONF_ENTRY_ENFORCE_MP3,
-            create_sample_rates_config_entry(48000, 24, 48000, 24, True),
+            create_sample_rates_config_entry(
+                max_sample_rate=48000, max_bit_depth=24, safe_max_bit_depth=24, hidden=True
+            ),
         )
         if not (sonos_player := self.sonos_players.get(player_id)):
             # most probably the player is not yet discovered

@@ -76,7 +76,9 @@ CONF_HELP_LINK = (
 )
 
 # airplay has fixed sample rate/bit depth so make this config entry static and hidden
-CONF_ENTRY_SAMPLE_RATES_SNAPCAST = create_sample_rates_config_entry(48000, 16, 48000, 16, True)
+CONF_ENTRY_SAMPLE_RATES_SNAPCAST = create_sample_rates_config_entry(
+    supported_sample_rates=[48000], supported_bit_depths=[16], hidden=True
+)
 
 DEFAULT_SNAPSERVER_IP = "127.0.0.1"
 DEFAULT_SNAPSERVER_PORT = 1705

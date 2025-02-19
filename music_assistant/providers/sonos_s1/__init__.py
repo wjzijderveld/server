@@ -66,7 +66,9 @@ CONF_HOUSEHOLD_ID = "household_id"
 SUBSCRIPTION_TIMEOUT = 1200
 ZGS_SUBSCRIPTION_TIMEOUT = 2
 
-CONF_ENTRY_SAMPLE_RATES = create_sample_rates_config_entry(48000, 16, 48000, 16, True)
+CONF_ENTRY_SAMPLE_RATES = create_sample_rates_config_entry(
+    max_sample_rate=48000, max_bit_depth=16, hidden=True
+)
 
 
 async def setup(

@@ -495,28 +495,41 @@ CONF_ENTRY_WARN_PREVIEW = ConfigEntry(
 
 
 def create_sample_rates_config_entry(
-    max_sample_rate: int,
-    max_bit_depth: int,
+    supported_sample_rates: list[int] | None = None,
+    supported_bit_depths: list[int] | None = None,
+    hidden: bool = False,
+    max_sample_rate: int | None = None,
+    max_bit_depth: int | None = None,
     safe_max_sample_rate: int = 48000,
     safe_max_bit_depth: int = 16,
-    hidden: bool = False,
-    supported_sample_rates: list[int] | None = None,
 ) -> ConfigEntry:
     """Create sample rates config entry based on player specific helpers."""
     assert CONF_ENTRY_SAMPLE_RATES.options
+    if supported_sample_rates is None:
+        supported_sample_rates = []
+    if supported_bit_depths is None:
+        supported_bit_depths = []
     conf_entry = ConfigEntry.from_dict(CONF_ENTRY_SAMPLE_RATES.to_dict())
     conf_entry.hidden = hidden
     options: list[ConfigValueOption] = []
     default_value: list[str] = []
+
     for option in CONF_ENTRY_SAMPLE_RATES.options:
         option_value = cast(str, option.value)
         sample_rate_str, bit_depth_str = option_value.split(MULTI_VALUE_SPLITTER, 1)
         sample_rate = int(sample_rate_str)
         bit_depth = int(bit_depth_str)
-        if supported_sample_rates and sample_rate not in supported_sample_rates:
+        # if no supported sample rates are defined, we accept all within max_sample_rate
+        if not supported_sample_rates and max_sample_rate and sample_rate <= max_sample_rate:
+            supported_sample_rates.append(sample_rate)
+        if not supported_bit_depths and max_bit_depth and bit_depth <= max_bit_depth:
+            supported_bit_depths.append(bit_depth)
+
+        if sample_rate not in supported_sample_rates:
             continue
-        if sample_rate <= max_sample_rate and bit_depth <= max_bit_depth:
-            options.append(option)
+        if bit_depth not in supported_bit_depths:
+            continue
+        options.append(option)
         if sample_rate <= safe_max_sample_rate and bit_depth <= safe_max_bit_depth:
             default_value.append(option_value)
     conf_entry.options = options

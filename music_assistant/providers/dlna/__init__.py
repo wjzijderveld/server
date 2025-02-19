@@ -66,7 +66,7 @@ PLAYER_CONFIG_ENTRIES = (
     # enable flow mode by default because
     # most dlna players do not support enqueueing
     CONF_ENTRY_FLOW_MODE_DEFAULT_ENABLED,
-    create_sample_rates_config_entry(192000, 24, 96000, 24),
+    create_sample_rates_config_entry(max_sample_rate=192000, max_bit_depth=24),
 )
 
 
