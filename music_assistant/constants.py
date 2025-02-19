@@ -440,7 +440,7 @@ CONF_ENTRY_SAMPLE_RATES = ConfigEntry(
         ConfigValueOption("384kHz / 16 bits", f"384000{MULTI_VALUE_SPLITTER}16"),
         ConfigValueOption("384kHz / 24 bits", f"384000{MULTI_VALUE_SPLITTER}24"),
     ],
-    default_value=[f"44100{MULTI_VALUE_SPLITTER}16", f"44100{MULTI_VALUE_SPLITTER}24"],
+    default_value=[f"44100{MULTI_VALUE_SPLITTER}16", f"48000{MULTI_VALUE_SPLITTER}16"],
     required=True,
     label="Sample rates supported by this player",
     category="advanced",
