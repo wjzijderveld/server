@@ -514,10 +514,8 @@ def create_sample_rates_config_entry(
 ) -> ConfigEntry:
     """Create sample rates config entry based on player specific helpers."""
     assert CONF_ENTRY_SAMPLE_RATES.options
-    if supported_sample_rates is None:
-        supported_sample_rates = []
-    if supported_bit_depths is None:
-        supported_bit_depths = []
+    final_supported_sample_rates = supported_sample_rates or []
+    final_supported_bit_depths = supported_bit_depths or []
     conf_entry = ConfigEntry.from_dict(CONF_ENTRY_SAMPLE_RATES.to_dict())
     conf_entry.hidden = hidden
     options: list[ConfigValueOption] = []
@@ -530,13 +528,13 @@ def create_sample_rates_config_entry(
         bit_depth = int(bit_depth_str)
         # if no supported sample rates are defined, we accept all within max_sample_rate
         if not supported_sample_rates and max_sample_rate and sample_rate <= max_sample_rate:
-            supported_sample_rates.append(sample_rate)
+            final_supported_sample_rates.append(sample_rate)
         if not supported_bit_depths and max_bit_depth and bit_depth <= max_bit_depth:
-            supported_bit_depths.append(bit_depth)
+            final_supported_bit_depths.append(bit_depth)
 
-        if sample_rate not in supported_sample_rates:
+        if sample_rate not in final_supported_sample_rates:
             continue
-        if bit_depth not in supported_bit_depths:
+        if bit_depth not in final_supported_bit_depths:
             continue
         options.append(option)
         if sample_rate <= safe_max_sample_rate and bit_depth <= safe_max_bit_depth:

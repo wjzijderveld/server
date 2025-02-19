@@ -288,8 +288,8 @@ def get_ffmpeg_args(
     elif output_format.content_type == ContentType.WAV:
         pcm_format = ContentType.from_bit_depth(output_format.bit_depth)
         output_args = [
-            # "-ar",
-            # str(output_format.sample_rate),
+            "-ar",
+            str(output_format.sample_rate),
             "-acodec",
             pcm_format.name.lower(),
             "-f",
@@ -298,7 +298,16 @@ def get_ffmpeg_args(
     elif output_format.content_type == ContentType.FLAC:
         # use level 0 compression for fastest encoding
         sample_fmt = "s32" if output_format.bit_depth > 16 else "s16"
-        output_args += ["-sample_fmt", sample_fmt, "-f", "flac", "-compression_level", "0"]
+        output_args += [
+            "-sample_fmt",
+            sample_fmt,
+            "-ar",
+            str(output_format.sample_rate),
+            "-f",
+            "flac",
+            "-compression_level",
+            "0",
+        ]
     elif output_format.content_type.is_pcm():
         # use explicit format identifier for pcm formats
         output_args += [

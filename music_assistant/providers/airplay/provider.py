@@ -326,12 +326,16 @@ class AirplayProvider(PlayerProvider):
             provider = cast(PluginProvider, self.mass.get_provider(media.custom_data["provider"]))
             plugin_source = provider.get_source()
             assert plugin_source.audio_format is not None  # for type checking
-            input_format = plugin_source.audio_format
-            audio_source = (
-                provider.get_audio_stream(player_id)  # type: ignore[assignment]
-                if plugin_source.stream_type == StreamType.CUSTOM
-                else cast(str, plugin_source.path)
-            )
+            if plugin_source.stream_type == StreamType.CUSTOM:
+                input_format = plugin_source.audio_format
+                audio_source = provider.get_audio_stream(player_id)
+            else:
+                input_format = AIRPLAY_PCM_FORMAT
+                audio_source = get_ffmpeg_stream(
+                    audio_input=media.uri,
+                    input_format=plugin_source.audio_format,
+                    output_format=AIRPLAY_PCM_FORMAT,
+                )
         elif media.queue_id and media.queue_id.startswith("ugp_"):
             # special case: UGP stream
             ugp_provider = cast(PlayerGroupProvider, self.mass.get_provider("player_group"))
