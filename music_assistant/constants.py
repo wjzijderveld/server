@@ -62,7 +62,6 @@ CONF_AUTO_PLAY: Final[str] = "auto_play"
 CONF_CROSSFADE: Final[str] = "crossfade"
 CONF_GROUP_MEMBERS: Final[str] = "group_members"
 CONF_HIDE_PLAYER: Final[str] = "hide_player"
-CONF_ENFORCE_MP3: Final[str] = "enforce_mp3"
 CONF_SYNC_ADJUST: Final[str] = "sync_adjust"
 CONF_TTS_PRE_ANNOUNCE: Final[str] = "tts_pre_announce"
 CONF_ANNOUNCE_VOLUME_STRATEGY: Final[str] = "announce_volume_strategy"
@@ -82,6 +81,7 @@ CONF_VOLUME_NORMALIZATION_FIXED_GAIN_TRACKS: Final[str] = "volume_normalization_
 CONF_POWER_CONTROL: Final[str] = "power_control"
 CONF_VOLUME_CONTROL: Final[str] = "volume_control"
 CONF_MUTE_CONTROL: Final[str] = "mute_control"
+CONF_OUTPUT_CODEC: Final[str] = "output_codec"
 
 # config default values
 DEFAULT_HOST: Final[str] = "0.0.0.0"
@@ -294,24 +294,33 @@ CONF_ENTRY_HIDE_PLAYER = ConfigEntry(
     default_value=False,
 )
 
-CONF_ENTRY_ENFORCE_MP3 = ConfigEntry(
-    key=CONF_ENFORCE_MP3,
-    type=ConfigEntryType.BOOLEAN,
-    label="Enforce (lossy) mp3 stream",
-    default_value=False,
-    description="By default, Music Assistant sends lossless, high quality audio "
-    "to all players. Some players can not deal with that and require the stream to be packed "
-    "into a lossy mp3 codec. \n\n "
-    "Only enable when needed. Saves some bandwidth at the cost of audio quality.",
-    category="audio",
+CONF_ENTRY_OUTPUT_CODEC = ConfigEntry(
+    key=CONF_OUTPUT_CODEC,
+    type=ConfigEntryType.STRING,
+    label="Output codec to use for streaming audio to the player",
+    default_value="flac",
+    options=[
+        ConfigValueOption("FLAC (lossless, compressed)", "flac"),
+        ConfigValueOption("MP3 (lossy)", "mp3"),
+        ConfigValueOption("AAC (lossy)", "aac"),
+        ConfigValueOption("WAV (lossless, uncompressed)", "wav"),
+    ],
+    description="Select the codec to use for streaming audio to this player. \n"
+    "By default, Music Assistant sends lossless, high quality audio to all players and prefers "
+    "the FLAC codec because it offers some compression while still remaining lossless \n\n"
+    "Some players however do not support FLAC and require the stream to be packed "
+    "into e.g. a lossy mp3 codec or you like to save some network bandwidth. \n\n "
+    "Choosing a lossy codec saves some bandwidth at the cost of audio quality.",
+    category="advanced",
 )
 
-CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED = ConfigEntry.from_dict(
-    {**CONF_ENTRY_ENFORCE_MP3.to_dict(), "default_value": True}
+CONF_ENTRY_OUTPUT_CODEC_DEFAULT_MP3 = ConfigEntry.from_dict(
+    {**CONF_ENTRY_OUTPUT_CODEC.to_dict(), "default_value": "mp3"}
 )
-CONF_ENTRY_ENFORCE_MP3_HIDDEN = ConfigEntry.from_dict(
-    {**CONF_ENTRY_ENFORCE_MP3.to_dict(), "default_value": True, "hidden": True}
+CONF_ENTRY_OUTPUT_CODEC_ENFORCE_MP3 = ConfigEntry.from_dict(
+    {**CONF_ENTRY_OUTPUT_CODEC.to_dict(), "default_value": "mp3", "hidden": True}
 )
+
 
 CONF_ENTRY_SYNC_ADJUST = ConfigEntry(
     key=CONF_SYNC_ADJUST,
@@ -548,6 +557,7 @@ BASE_PLAYER_CONFIG_ENTRIES = (
     CONF_ENTRY_TTS_PRE_ANNOUNCE,
     CONF_ENTRY_SAMPLE_RATES,
     CONF_ENTRY_HTTP_PROFILE_FORCED_2,
+    CONF_ENTRY_OUTPUT_CODEC,
 )
 
 

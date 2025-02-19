@@ -20,15 +20,14 @@ from music_assistant_models.errors import InvalidDataError, LoginFailed, SetupFa
 from music_assistant_models.player import DeviceInfo, Player, PlayerMedia
 
 from music_assistant.constants import (
-    CONF_ENFORCE_MP3,
     CONF_ENTRY_CROSSFADE,
     CONF_ENTRY_CROSSFADE_DURATION,
     CONF_ENTRY_ENABLE_ICY_METADATA,
-    CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED,
-    CONF_ENTRY_ENFORCE_MP3_HIDDEN,
     CONF_ENTRY_FLOW_MODE_ENFORCED,
     CONF_ENTRY_HTTP_PROFILE,
     CONF_ENTRY_HTTP_PROFILE_FORCED_2,
+    CONF_ENTRY_OUTPUT_CODEC_DEFAULT_MP3,
+    CONF_ENTRY_OUTPUT_CODEC_ENFORCE_MP3,
     HIDDEN_ANNOUNCE_VOLUME_CONFIG_ENTRIES,
     create_sample_rates_config_entry,
 )
@@ -63,7 +62,7 @@ CONF_PLAYERS = "players"
 DEFAULT_PLAYER_CONFIG_ENTRIES = (
     CONF_ENTRY_CROSSFADE,
     CONF_ENTRY_CROSSFADE_DURATION,
-    CONF_ENTRY_ENFORCE_MP3_DEFAULT_ENABLED,
+    CONF_ENTRY_OUTPUT_CODEC_DEFAULT_MP3,
     CONF_ENTRY_HTTP_PROFILE,
     CONF_ENTRY_ENABLE_ICY_METADATA,
     CONF_ENTRY_FLOW_MODE_ENFORCED,
@@ -194,7 +193,7 @@ class HomeAssistantPlayers(PlayerProvider):
                 if bit_depth not in supported_bit_depths:
                     supported_bit_depths.append(bit_depth)
             if not supports_flac:
-                base_entries = (*base_entries, CONF_ENTRY_ENFORCE_MP3_HIDDEN)
+                base_entries = (*base_entries, CONF_ENTRY_OUTPUT_CODEC_ENFORCE_MP3)
             return (
                 *base_entries,
                 # New ESPHome mediaplayer (used in Voice PE) uses FLAC 48khz/16 bits
@@ -255,11 +254,6 @@ class HomeAssistantPlayers(PlayerProvider):
 
     async def play_media(self, player_id: str, media: PlayerMedia) -> None:
         """Handle PLAY MEDIA on given player."""
-        if self.mass.config.get_player_config_value(
-            player_id,
-            CONF_ENFORCE_MP3,
-        ):
-            media.uri = media.uri.replace(".flac", ".mp3")
         player = self.mass.players.get(player_id, True)
         assert player
         extra_data = {

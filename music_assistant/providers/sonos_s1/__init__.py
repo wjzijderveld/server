@@ -32,11 +32,10 @@ from soco.discovery import discover, scan_network
 
 from music_assistant.constants import (
     CONF_CROSSFADE,
-    CONF_ENFORCE_MP3,
     CONF_ENTRY_CROSSFADE,
-    CONF_ENTRY_ENFORCE_MP3,
     CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
     CONF_ENTRY_HTTP_PROFILE_FORCED_1,
+    CONF_ENTRY_OUTPUT_CODEC,
     VERBOSE_LOG_LEVEL,
     create_sample_rates_config_entry,
 )
@@ -184,14 +183,14 @@ class SonosPlayerProvider(PlayerProvider):
             return (
                 *base_entries,
                 CONF_ENTRY_CROSSFADE,
-                CONF_ENTRY_ENFORCE_MP3,
+                CONF_ENTRY_OUTPUT_CODEC,
                 CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
             )
         return (
             *base_entries,
             CONF_ENTRY_CROSSFADE,
             CONF_ENTRY_SAMPLE_RATES,
-            CONF_ENTRY_ENFORCE_MP3,
+            CONF_ENTRY_OUTPUT_CODEC,
             CONF_ENTRY_FLOW_MODE_HIDDEN_DISABLED,
             CONF_ENTRY_HTTP_PROFILE_FORCED_1,
         )
@@ -300,8 +299,6 @@ class SonosPlayerProvider(PlayerProvider):
                 "accept play_media command, it is synced to another player."
             )
             raise PlayerCommandFailed(msg)
-        if await self.mass.config.get_player_config_value(player_id, CONF_ENFORCE_MP3):
-            media.uri = media.uri.replace(".flac", ".mp3")
         didl_metadata = create_didl_metadata(media)
         await asyncio.to_thread(sonos_player.soco.play_uri, media.uri, meta=didl_metadata)
         self.mass.call_later(2, sonos_player.poll_speaker)
@@ -310,8 +307,6 @@ class SonosPlayerProvider(PlayerProvider):
     async def enqueue_next_media(self, player_id: str, media: PlayerMedia) -> None:
         """Handle enqueuing of the next queue item on the player."""
         sonos_player = self.sonosplayers[player_id]
-        if await self.mass.config.get_player_config_value(player_id, CONF_ENFORCE_MP3):
-            media.uri = media.uri.replace(".flac", ".mp3")
         didl_metadata = create_didl_metadata(media)
         # set crossfade according to player setting
         crossfade = bool(await self.mass.config.get_player_config_value(player_id, CONF_CROSSFADE))
