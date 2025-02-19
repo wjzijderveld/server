@@ -22,7 +22,6 @@ from music_assistant_models.enums import (
     PlayerState,
     PlayerType,
     ProviderFeature,
-    StreamType,
 )
 from music_assistant_models.errors import SetupFailedError
 from music_assistant_models.media_items import AudioFormat
@@ -43,7 +42,6 @@ from music_assistant.helpers.audio import FFMpeg, get_ffmpeg_stream, get_player_
 from music_assistant.helpers.process import AsyncProcess, check_output
 from music_assistant.helpers.util import get_ip_pton
 from music_assistant.models.player_provider import PlayerProvider
-from music_assistant.models.plugin import PluginProvider
 
 if TYPE_CHECKING:
     from music_assistant_models.config_entries import ProviderConfig
@@ -517,16 +515,11 @@ class SnapCastProvider(PlayerProvider):
             )
         elif media.media_type == MediaType.PLUGIN_SOURCE:
             # special case: plugin source stream
-            # consume the stream directly, so we can skip one step in between
-            assert media.custom_data is not None  # for type checking
-            provider = cast(PluginProvider, self.mass.get_provider(media.custom_data["provider"]))
-            plugin_source = provider.get_source()
-            assert plugin_source.audio_format is not None  # for type checking
-            input_format = plugin_source.audio_format
-            audio_source = (
-                provider.get_audio_stream(player_id)
-                if plugin_source.stream_type == StreamType.CUSTOM
-                else plugin_source.path
+            input_format = DEFAULT_SNAPCAST_FORMAT
+            audio_source = self.mass.streams.get_plugin_source_stream(
+                plugin_source_id=media.custom_data["provider"],
+                output_format=DEFAULT_SNAPCAST_FORMAT,
+                player_id=player_id,
             )
         elif media.queue_id.startswith("ugp_"):
             # special case: UGP stream

@@ -878,15 +878,18 @@ class StreamsController(CoreController):
         )
         chunk_size = int(get_chunksize(output_format, 1) / 10)
         player.active_source = plugin_source_id
-        async for chunk in get_ffmpeg_stream(
-            audio_input=audio_input,
-            input_format=plugin_source.audio_format,
-            output_format=output_format,
-            chunk_size=chunk_size,
-            filter_params=player_filter_params,
-            extra_input_args=["-re"],
-        ):
-            yield chunk
+        try:
+            async for chunk in get_ffmpeg_stream(
+                audio_input=audio_input,
+                input_format=plugin_source.audio_format,
+                output_format=output_format,
+                chunk_size=chunk_size,
+                filter_params=player_filter_params,
+                extra_input_args=["-re"],
+            ):
+                yield chunk
+        finally:
+            player.active_source = player.player_id
 
     async def get_queue_item_stream(
         self,
