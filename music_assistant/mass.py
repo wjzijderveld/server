@@ -577,6 +577,11 @@ class MusicAssistant:
                 await self._update_available_providers_cache()
                 self.signal_event(EventType.PROVIDERS_UPDATED, data=self.get_providers())
 
+    async def unload_provider_with_error(self, instance_id: str, error: str) -> None:
+        """Unload a provider when it got into trouble which needs user interaction."""
+        self.config.set(f"{CONF_PROVIDERS}/{instance_id}/last_error", error)
+        await self.unload_provider(instance_id)
+
     def _register_api_commands(self) -> None:
         """Register all methods decorated as api_command within a class(instance)."""
         for cls in (

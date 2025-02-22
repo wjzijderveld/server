@@ -106,6 +106,16 @@ class Provider:
             return f"{self.manifest.name} {postfix}"
         return self.manifest.name
 
+    def update_config_value(self, key: str, value: Any, encrypted: bool = False) -> None:
+        """Update a config value."""
+        self.mass.config.set_raw_provider_config_value(self.instance_id, key, value, encrypted)
+        # also update the cached copy within the provider instance
+        self.config.values[key].value = value
+
+    def unload_with_error(self, error: str) -> None:
+        """Unload provider with error message."""
+        self.mass.call_later(1, self.mass.unload_provider, self.instance_id, error)
+
     def to_dict(self, *args, **kwargs) -> dict[str, Any]:
         """Return Provider(instance) as serializable dict."""
         return {
