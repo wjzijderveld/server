@@ -94,17 +94,30 @@ class Provider:
     def name(self) -> str:
         """Return (custom) friendly name for this provider instance."""
         if self.config.name:
+            # always prefer user-set name from config
             return self.config.name
         return self.default_name
 
     @property
+    @final
     def default_name(self) -> str:
-        """Return a default name for this provider instance."""
-        inst_count = len([x for x in self.mass.music.providers if x.domain == self.domain])
-        if inst_count > 1:
-            postfix = self.instance_id[-8:]
-            return f"{self.manifest.name} {postfix}"
-        return self.manifest.name
+        """Return a default friendly name for this provider instance."""
+        # create default name based on instance count
+        instances = [x.instance_id for x in self.mass.music.providers if x.domain == self.domain]
+        if len(instances) <= 1:
+            # only one instance (or no instances yet at all) - return provider name
+            return self.manifest.name
+        instance_name_postfix = self.instance_name_postfix
+        if not instance_name_postfix:
+            # default implementation - simply use the instance number/index
+            instance_name_postfix = str(instances.index(self.instance_id) + 1)
+        # append instance name to provider name
+        return f"{self.manifest.name} [{self.instance_name_postfix}]"
+
+    @property
+    def instance_name_postfix(self) -> str | None:
+        """Return a (default) instance name postfix for this provider instance."""
+        return None
 
     def update_config_value(self, key: str, value: Any, encrypted: bool = False) -> None:
         """Update a config value."""
@@ -122,6 +135,8 @@ class Provider:
             "type": self.type.value,
             "domain": self.domain,
             "name": self.name,
+            "default_name": self.default_name,
+            "instance_name_postfix": self.instance_name_postfix,
             "instance_id": self.instance_id,
             "lookup_key": self.lookup_key,
             "supported_features": [x.value for x in self.supported_features],

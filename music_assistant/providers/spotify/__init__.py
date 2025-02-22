@@ -288,12 +288,11 @@ class SpotifyProvider(MusicProvider):
         return base
 
     @property
-    def default_name(self) -> str:
-        """Return default name for this provider instance."""
+    def instance_name_postfix(self) -> str | None:
+        """Return a (default) instance name postfix for this provider instance."""
         if self._sp_user:
-            postfix = self._sp_user["display_name"]
-            return f"{self.manifest.name}: {postfix}"
-        return super().default_name
+            return self._sp_user["display_name"]
+        return None
 
     async def search(
         self, search_query: str, media_types=list[MediaType], limit: int = 5
