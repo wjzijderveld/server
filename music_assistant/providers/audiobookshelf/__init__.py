@@ -30,7 +30,12 @@ from music_assistant_models.enums import (
     StreamType,
 )
 from music_assistant_models.errors import LoginFailed, MediaNotFoundError
-from music_assistant_models.media_items import AudioFormat, BrowseFolder, MediaItemTypeOrItemMapping
+from music_assistant_models.media_items import (
+    AudioFormat,
+    BrowseFolder,
+    MediaItemType,
+    MediaItemTypeOrItemMapping,
+)
 from music_assistant_models.streamdetails import StreamDetails
 
 from music_assistant.helpers.ffmpeg import get_ffmpeg_stream
@@ -538,7 +543,13 @@ class Audiobookshelf(MusicProvider):
         return False, 0
 
     async def on_played(
-        self, media_type: MediaType, item_id: str, fully_played: bool, position: int
+        self,
+        media_type: MediaType,
+        item_id: str,
+        fully_played: bool,
+        position: int,
+        is_playing: bool = False,
+        media_item: MediaItemType | None = None,
     ) -> None:
         """Update progress in Audiobookshelf.
 

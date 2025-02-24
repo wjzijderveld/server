@@ -1925,6 +1925,7 @@ class PlayerQueuesController(CoreController):
                 item_to_report.media_item,
                 fully_played=fully_played,
                 seconds_played=seconds_played,
+                is_playing=is_playing,
             )
         )
         # signal 'media item played' event,
