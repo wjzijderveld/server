@@ -320,6 +320,9 @@ CONF_ENTRY_OUTPUT_CODEC_DEFAULT_MP3 = ConfigEntry.from_dict(
 CONF_ENTRY_OUTPUT_CODEC_ENFORCE_MP3 = ConfigEntry.from_dict(
     {**CONF_ENTRY_OUTPUT_CODEC.to_dict(), "default_value": "mp3", "hidden": True}
 )
+CONF_ENTRY_OUTPUT_CODEC_HIDDEN = ConfigEntry.from_dict(
+    {**CONF_ENTRY_OUTPUT_CODEC.to_dict(), "hidden": True}
+)
 
 
 CONF_ENTRY_SYNC_ADJUST = ConfigEntry(
