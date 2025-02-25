@@ -123,6 +123,7 @@ class PlayerQueuesController(CoreController):
         self._queues: dict[str, PlayerQueue] = {}
         self._queue_items: dict[str, list[QueueItem]] = {}
         self._prev_states: dict[str, CompareState] = {}
+        self._transitioning_players: set[str] = set()
         self.manifest.name = "Player Queues controller"
         self.manifest.description = (
             "Music Assistant's core controller which manages the queues for all players."
@@ -802,10 +803,10 @@ class PlayerQueuesController(CoreController):
                 media=await self.player_media_from_queue_item(queue_item, queue.flow_mode),
             )
             await asyncio.sleep(2)
-            setattr(queue, "transitioning", False)  # noqa: B010
+            self._transitioning_players.discard(queue_id)
 
         # we set a flag to notify the update logic that we're transitioning to a new track
-        setattr(queue, "transitioning", True)  # noqa: B010
+        self._transitioning_players.add(queue_id)
         self.mass.call_later(
             1.5 if debounce else 0.1,
             play_media,
@@ -923,10 +924,11 @@ class PlayerQueuesController(CoreController):
             queue.state = PlayerState.IDLE
             # return early if the queue is not active and we have no previous state
             return
-        if getattr(queue, "transitioning", False):
+        if queue.queue_id in self._transitioning_players:
             # we're currently transitioning to a new track,
             # ignore updates from the player during this time
             return
+
         # queue is active and preflight checks passed, update the queue details
         self._update_queue_from_player(player)
 
