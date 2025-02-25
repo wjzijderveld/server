@@ -476,7 +476,7 @@ class HomeAssistantPlayers(PlayerProvider):
 
         player = Player(
             player_id=state["entity_id"],
-            provider=self.lookup_key,
+            provider=self.instance_id,
             type=PlayerType.PLAYER,
             name=state["attributes"]["friendly_name"],
             available=state["state"] not in UNAVAILABLE_STATES,

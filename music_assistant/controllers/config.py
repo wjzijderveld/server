@@ -570,7 +570,10 @@ class ConfigController:
             msg = f"Unknown provider domain: {provider_domain}"
             raise KeyError(msg)
         config_entries = await self.get_provider_config_entries(provider_domain)
-        instance_id = f"{manifest.domain}--{shortuuid.random(8)}"
+        if manifest.multi_instance:
+            instance_id = f"{manifest.domain}--{shortuuid.random(8)}"
+        else:
+            instance_id = manifest.domain
         default_config: ProviderConfig = ProviderConfig.parse(
             config_entries,
             {
@@ -911,7 +914,10 @@ class ConfigController:
         if existing and not manifest.multi_instance:
             msg = f"Provider {manifest.name} does not support multiple instances"
             raise ValueError(msg)
-        instance_id = f"{manifest.domain}--{shortuuid.random(8)}"
+        if manifest.multi_instance:
+            instance_id = f"{manifest.domain}--{shortuuid.random(8)}"
+        else:
+            instance_id = manifest.domain
         # all checks passed, create config object
         config_entries = await self.get_provider_config_entries(
             provider_domain=provider_domain, instance_id=instance_id, values=values
