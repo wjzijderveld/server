@@ -361,7 +361,7 @@ class PlayerQueuesController(CoreController):
     async def play_media(
         self,
         queue_id: str,
-        media: MediaItemType | list[MediaItemType] | str | list[str],
+        media: MediaItemTypeOrItemMapping | list[MediaItemTypeOrItemMapping] | str | list[str],
         option: QueueOption | None = None,
         radio_mode: bool = False,
         start_item: PlayableMediaItemType | str | None = None,
