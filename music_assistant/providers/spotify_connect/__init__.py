@@ -274,7 +274,7 @@ class SpotifyConnectProvider(PluginProvider):
         # we need to start the playback
         if json_data.get("event") in ("sink", "playing") and (not self._source_details.in_use_by):
             # initiate playback by selecting this source on the default player
-            self.logger.error("Initiating playback on %s", self.mass_player_id)
+            self.logger.debug("Initiating playback on %s", self.mass_player_id)
             self.mass.create_task(
                 self.mass.players.select_source(self.mass_player_id, self.instance_id)
             )
