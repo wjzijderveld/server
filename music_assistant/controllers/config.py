@@ -302,6 +302,10 @@ class ConfigController:
                 if player.provider != instance_id:
                     continue
                 self.mass.players.remove(player.player_id, cleanup_config=True)
+            # cleanup remaining player configs
+            for player_conf in list(self.get(CONF_PLAYERS, {}).values()):
+                if player_conf["provider"] == instance_id:
+                    self.remove(f"{CONF_PLAYERS}/{player_conf['player_id']}")
 
     async def remove_provider_config_value(self, instance_id: str, key: str) -> None:
         """Remove/reset single Provider config value."""
