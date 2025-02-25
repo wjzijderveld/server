@@ -315,31 +315,46 @@ class SpotifyProvider(MusicProvider):
             return searchresult
         searchtype = ",".join(searchtypes)
         search_query = search_query.replace("'", "")
-        api_result = await self._get_data("search", q=search_query, type=searchtype, limit=limit)
-        if "artists" in api_result:
-            searchresult.artists += [
-                self._parse_artist(item)
-                for item in api_result["artists"]["items"]
-                if (item and item["id"] and item["name"])
-            ]
-        if "albums" in api_result:
-            searchresult.albums += [
-                self._parse_album(item)
-                for item in api_result["albums"]["items"]
-                if (item and item["id"])
-            ]
-        if "tracks" in api_result:
-            searchresult.tracks += [
-                self._parse_track(item)
-                for item in api_result["tracks"]["items"]
-                if (item and item["id"])
-            ]
-        if "playlists" in api_result:
-            searchresult.playlists += [
-                self._parse_playlist(item)
-                for item in api_result["playlists"]["items"]
-                if (item and item["id"])
-            ]
+        offset = 0
+        page_limit = min(limit, 50)
+        while True:
+            items_received = 0
+            api_result = await self._get_data(
+                "search", q=search_query, type=searchtype, limit=page_limit, offset=offset
+            )
+            if "artists" in api_result:
+                searchresult.artists += [
+                    self._parse_artist(item)
+                    for item in api_result["artists"]["items"]
+                    if (item and item["id"] and item["name"])
+                ]
+                items_received += len(api_result["artists"]["items"])
+            if "albums" in api_result:
+                searchresult.albums += [
+                    self._parse_album(item)
+                    for item in api_result["albums"]["items"]
+                    if (item and item["id"])
+                ]
+                items_received += len(api_result["albums"]["items"])
+            if "tracks" in api_result:
+                searchresult.tracks += [
+                    self._parse_track(item)
+                    for item in api_result["tracks"]["items"]
+                    if (item and item["id"])
+                ]
+                items_received += len(api_result["tracks"]["items"])
+            if "playlists" in api_result:
+                searchresult.playlists += [
+                    self._parse_playlist(item)
+                    for item in api_result["playlists"]["items"]
+                    if (item and item["id"])
+                ]
+                items_received += len(api_result["playlists"]["items"])
+            offset += page_limit
+            if offset >= limit:
+                break
+            if items_received < page_limit:
+                break
         return searchresult
 
     async def get_library_artists(self) -> AsyncGenerator[Artist, None]:
