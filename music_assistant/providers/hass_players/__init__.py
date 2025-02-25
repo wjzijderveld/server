@@ -306,6 +306,10 @@ class HomeAssistantPlayers(PlayerProvider):
             # as MA already delivers an optimized stream
             extra_data["bypass_proxy"] = True
 
+        # stop the player if it is already playing
+        if player.state == PlayerState.PLAYING:
+            await self.cmd_stop(player_id)
+
         await self.hass_prov.hass.call_service(
             domain="media_player",
             service="play_media",
