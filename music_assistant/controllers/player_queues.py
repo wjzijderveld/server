@@ -55,7 +55,12 @@ from music_assistant_models.player import PlayerMedia
 from music_assistant_models.player_queue import PlayerQueue
 from music_assistant_models.queue_item import QueueItem
 
-from music_assistant.constants import CONF_CROSSFADE, CONF_FLOW_MODE, MASS_LOGO_ONLINE
+from music_assistant.constants import (
+    CONF_CROSSFADE,
+    CONF_FLOW_MODE,
+    MASS_LOGO_ONLINE,
+    VERBOSE_LOG_LEVEL,
+)
 from music_assistant.helpers.api import api_command
 from music_assistant.helpers.audio import get_stream_details, get_stream_dsp_details
 from music_assistant.helpers.throttle_retry import BYPASS_THROTTLER
@@ -1910,17 +1915,18 @@ class PlayerQueuesController(CoreController):
             fully_played = seconds_played >= duration - 10
 
         is_playing = is_current_item and queue.state == PlayerState.PLAYING
-        self.logger.debug(
-            "%s %s '%s' (%s) - Fully played: %s - Progress: %s (%s/%ss)",
-            queue.display_name,
-            "is playing" if is_playing else "played",
-            item_to_report.name,
-            item_to_report.uri,
-            fully_played,
-            f"{percentage_played}%",
-            seconds_played,
-            duration,
-        )
+        if self.logger.isEnabledFor(VERBOSE_LOG_LEVEL):
+            self.logger.debug(
+                "%s %s '%s' (%s) - Fully played: %s - Progress: %s (%s/%ss)",
+                queue.display_name,
+                "is playing" if is_playing else "played",
+                item_to_report.name,
+                item_to_report.uri,
+                fully_played,
+                f"{percentage_played}%",
+                seconds_played,
+                duration,
+            )
         # add entry to playlog - this also handles resume of podcasts/audiobooks
         self.mass.create_task(
             self.mass.music.mark_item_played(
