@@ -71,8 +71,8 @@ DEFAULT_PLAYER_CONFIG_ENTRIES = (
     CONF_ENTRY_FLOW_MODE_ENFORCED,
 )
 
-BLOCKLISTED_HASS_INTEGRATIONS = ("alexa_media",)
-WARN_HASS_INTEGRATIONS = ("apple_tv", "cast", "dlna_dmr", "fully_kiosk", "sonos", "snapcast")
+BLOCKLISTED_HASS_INTEGRATIONS = ("alexa_media", "apple_tv")
+WARN_HASS_INTEGRATIONS = ("cast", "dlna_dmr", "fully_kiosk", "sonos", "snapcast")
 
 CONF_ENTRY_WARN_HASS_INTEGRATION = ConfigEntry(
     key="warn_hass_integration",
@@ -158,7 +158,9 @@ async def get_config_entries(
             required=True,
             options=player_entities,
             description="Specify which HA media_player entity id's you "
-            "like to import as players in Music Assistant.",
+            "like to import as players in Music Assistant.\n\n"
+            "Note that only Media player entities will be listed which are "
+            "compatible with Music Assistant.",
         ),
     )
 
