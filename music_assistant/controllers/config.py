@@ -323,7 +323,7 @@ class ConfigController:
     async def get_player_configs(
         self, provider: str | None = None, include_values: bool = False
     ) -> list[PlayerConfig]:
-        """Return all known player configurations, optionally filtered by provider domain."""
+        """Return all known player configurations, optionally filtered by provider id."""
         return [
             await self.get_player_config(raw_conf["player_id"])
             if include_values
