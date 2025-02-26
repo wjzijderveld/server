@@ -1485,7 +1485,7 @@ class PlayerController(CoreController):
         player.volume_control = config.get_value(CONF_VOLUME_CONTROL)
         player.mute_control = config.get_value(CONF_MUTE_CONTROL)
 
-    async def _play_announcement(
+    async def _play_announcement(  # noqa: PLR0915
         self,
         player: Player,
         announcement: PlayerMedia,
@@ -1552,7 +1552,9 @@ class PlayerController(CoreController):
                         volume_player.display_name,
                     )
                     tg.create_task(self.cmd_stop(volume_player.player_id))
-                prev_volume = volume_player.volume_level
+                if volume_player.volume_control == PLAYER_CONTROL_NONE:
+                    continue
+                prev_volume = volume_player.volume_level or 0
                 announcement_volume = self.get_announcement_volume(volume_player_id, volume_level)
                 temp_volume = announcement_volume or player.volume_level
                 if temp_volume != prev_volume:
