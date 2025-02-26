@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
-    CacheCategory,
     ConfigEntryType,
     ContentType,
     EventType,
@@ -56,6 +55,7 @@ from music_assistant_models.player_queue import PlayerQueue
 from music_assistant_models.queue_item import QueueItem
 
 from music_assistant.constants import (
+    CACHE_CATEGORY_PLAYER_QUEUE_STATE,
     CONF_CROSSFADE,
     CONF_FLOW_MODE,
     MASS_LOGO_ONLINE,
@@ -872,14 +872,14 @@ class PlayerQueuesController(CoreController):
         queue = None
         # try to restore previous state
         if prev_state := await self.mass.cache.get(
-            "state", category=CacheCategory.PLAYER_QUEUE_STATE, base_key=queue_id
+            "state", category=CACHE_CATEGORY_PLAYER_QUEUE_STATE, base_key=queue_id
         ):
             try:
                 queue = PlayerQueue.from_cache(prev_state)
                 prev_items = await self.mass.cache.get(
                     "items",
                     default=[],
-                    category=CacheCategory.PLAYER_QUEUE_STATE,
+                    category=CACHE_CATEGORY_PLAYER_QUEUE_STATE,
                     base_key=queue_id,
                 )
                 queue_items = [QueueItem.from_cache(x) for x in prev_items]
@@ -1166,7 +1166,7 @@ class PlayerQueuesController(CoreController):
                 self.mass.cache.set(
                     "items",
                     [x.to_cache() for x in self._queue_items[queue_id]],
-                    category=CacheCategory.PLAYER_QUEUE_STATE,
+                    category=CACHE_CATEGORY_PLAYER_QUEUE_STATE,
                     base_key=queue_id,
                 )
             )
@@ -1177,7 +1177,7 @@ class PlayerQueuesController(CoreController):
             self.mass.cache.set(
                 "state",
                 queue.to_cache(),
-                category=CacheCategory.PLAYER_QUEUE_STATE,
+                category=CACHE_CATEGORY_PLAYER_QUEUE_STATE,
                 base_key=queue_id,
             )
         )

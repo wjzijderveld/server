@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, ParamSpec, TypeVar, cast
 from music_assistant_models.config_entries import ConfigEntry, ConfigValueOption, ConfigValueType
 from music_assistant_models.enums import (
     AlbumType,
-    CacheCategory,
     ConfigEntryType,
     ContentType,
     ExternalID,
@@ -46,6 +45,7 @@ from tidalapi import Session as TidalSession
 from tidalapi import Track as TidalTrack
 from tidalapi import exceptions as tidal_exceptions
 
+from music_assistant.constants import CACHE_CATEGORY_DEFAULT, CACHE_CATEGORY_MEDIA_INFO
 from music_assistant.helpers.auth import AuthenticationHelper
 from music_assistant.helpers.tags import AudioTags, async_parse_tags
 from music_assistant.helpers.throttle_retry import ThrottlerManager, throttle_with_retries
@@ -733,7 +733,7 @@ class TidalProvider(MusicProvider):
         # Try to get from cache first
         cache_key = f"isrc_map_{item_id}"
         cached_track_id = await self.mass.cache.get(
-            cache_key, category=CacheCategory.DEFAULT, base_key=self.lookup_key
+            cache_key, category=CACHE_CATEGORY_DEFAULT, base_key=self.lookup_key
         )
 
         if cached_track_id:
@@ -745,7 +745,7 @@ class TidalProvider(MusicProvider):
             except MediaNotFoundError:
                 # Track no longer exists, invalidate cache
                 await self.mass.cache.delete(
-                    cache_key, category=CacheCategory.DEFAULT, base_key=self.lookup_key
+                    cache_key, category=CACHE_CATEGORY_DEFAULT, base_key=self.lookup_key
                 )
 
         # Lookup by ISRC if no cache or cached track not found
@@ -773,7 +773,7 @@ class TidalProvider(MusicProvider):
 
         # Cache the mapping for future use
         await self.mass.cache.set(
-            cache_key, tracks[0].id, category=CacheCategory.DEFAULT, base_key=self.lookup_key
+            cache_key, tracks[0].id, category=CACHE_CATEGORY_DEFAULT, base_key=self.lookup_key
         )
 
         return tracks[0]
@@ -1001,7 +1001,7 @@ class TidalProvider(MusicProvider):
         self, item_id: str, url: str, force_refresh: bool = False
     ) -> AudioTags:
         """Retrieve (cached) mediainfo for track."""
-        cache_category = CacheCategory.MEDIA_INFO
+        cache_category = CACHE_CATEGORY_MEDIA_INFO
         cache_base_key = self.lookup_key
         # do we have some cached info for this url ?
         cached_info = await self.mass.cache.get(
