@@ -825,7 +825,7 @@ class ConfigController:
             default_providers = {x.domain for x in self.mass.get_provider_manifests() if x.builtin}
             for provider_config in self._data.get(CONF_PROVIDERS, {}).values():
                 if provider_config["domain"] not in default_providers:
-                    self.set(CONF_ONBOARD_DONE, True)
+                    self._data[CONF_ONBOARD_DONE] = True
                     changed = True
                     break
 
