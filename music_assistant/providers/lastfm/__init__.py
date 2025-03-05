@@ -1,10 +1,8 @@
 """Allows scrobbling of tracks with the help of PyLast."""
 
-import asyncio
 import logging
 import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 import pylast
 from music_assistant_models.config_entries import (
@@ -14,16 +12,11 @@ from music_assistant_models.config_entries import (
     ProviderConfig,
 )
 from music_assistant_models.constants import SECURE_STRING_SUBSTITUTE
-from music_assistant_models.enums import ConfigEntryType, EventType, PlayerState
+from music_assistant_models.enums import ConfigEntryType, EventType
 from music_assistant_models.errors import LoginFailed, SetupFailedError
 from music_assistant_models.event import MassEvent
-from music_assistant_models.media_items import Album, is_track
 from music_assistant_models.playback_progress_report import MediaItemPlaybackProgressReport
 from music_assistant_models.provider import ProviderManifest
-
-if TYPE_CHECKING:
-    from music_assistant_models.media_items import Track
-    from music_assistant_models.player_queue import PlayerQueue
 
 from music_assistant.constants import MASS_LOGGER_NAME
 from music_assistant.helpers.auth import AuthenticationHelper
@@ -50,7 +43,6 @@ class LastFMScrobbleProvider(PluginProvider):
 
     _network: pylast._Network = None
     _currently_playing: str | None = None
-    _processing_queue_update = False
     _on_unload: list[Callable[[], None]] = []
 
     def _get_network_config(self) -> dict[str, ConfigValueType]:
@@ -67,19 +59,15 @@ class LastFMScrobbleProvider(PluginProvider):
         await super().loaded_in_mass()
 
         if not self.config.get_value(CONF_SESSION_KEY):
-            self.logger.info("No session key available")
+            self.logger.info("No session key available, don't forget to authenticate!")
             return
 
         self._network = _get_network(self._get_network_config())
 
-        # subscribe to internal events
-        self._on_unload.append(
-            self.mass.subscribe(self._on_mass_queue_updated, EventType.QUEUE_UPDATED)
-        )
+        # subscribe to internal event
         self._on_unload.append(
             self.mass.subscribe(self._on_mass_media_item_played, EventType.MEDIA_ITEM_PLAYED)
         )
-        self.logger.debug("subscribed to events")
 
     async def unload(self, is_removed: bool = False) -> None:
         """
@@ -90,59 +78,6 @@ class LastFMScrobbleProvider(PluginProvider):
         for unload_cb in self._on_unload:
             unload_cb()
 
-    async def _on_mass_queue_updated(self, event: MassEvent) -> None:
-        """Player has updated, update nowPlaying."""
-        if self._network is None:
-            self.logger.error("no network available during _on_mass_queue_updated")
-            return
-
-        lock = asyncio.Lock()
-        async with lock:
-            if self._processing_queue_update:
-                return
-
-            queue: PlayerQueue = event.data
-            if queue.state != PlayerState.PLAYING:
-                self.logger.debug("queue update ignored, no track currently playing")
-                self._currently_playing = None
-                return
-
-            if queue.current_item is None or queue.current_item.media_item is None:
-                return
-
-            if not is_track(queue.current_item.media_item):
-                return
-
-            track: Track = queue.current_item.media_item
-            self.logger.debug(f"{track.uri} vs {self._currently_playing}")
-            if track.uri == self._currently_playing:
-                self.logger.debug(
-                    f"queue update ignored, track {track.uri} already marked as 'now playing'"
-                )
-                return
-
-            self._processing_queue_update = True
-
-            def update_now_playing() -> None:
-                try:
-                    self._network.update_now_playing(
-                        track.artist_str,
-                        track.name,
-                        track.album.name if track.album else None,
-                        track.album.artist_str if isinstance(track.album, Album) else None,
-                        track.duration,
-                        track.track_number,
-                        track.mbid,
-                    )
-                    self.logger.debug(f"track {track.uri} marked as 'now playing'")
-                    self._currently_playing = track.uri
-                except Exception as err:
-                    self.logger.exception(err)
-                finally:
-                    self._processing_queue_update = False
-
-            self.mass.loop.run_in_executor(None, update_now_playing)
-
     async def _on_mass_media_item_played(self, event: MassEvent) -> None:
         """Media item has finished playing, we'll scrobble the track."""
         if self._network is None:
@@ -151,27 +86,45 @@ class LastFMScrobbleProvider(PluginProvider):
 
         report = event.data
 
-        if not self.should_scrobble(report):
-            self.logger.debug(f"track {report.uri} should not be scrobbled")
-            return
+        def update_now_playing() -> None:
+            try:
+                self._network.update_now_playing(
+                    report.artist,
+                    report.name,
+                    report.album,
+                    duration=report.duration,
+                    mbid=report.mbid,
+                )
+                self.logger.debug(f"track {report.uri} marked as 'now playing'")
+                self._currently_playing = report.uri
+            except Exception as err:
+                self.logger.exception(err)
 
         def scrobble() -> None:
             try:
                 # album artist and track number are not available without an extra API call
                 # so they won't be scrobbled
                 self._network.scrobble(
-                    report["artist"],
-                    report["name"],
+                    report.artist,
+                    report.name,
                     time.time(),
-                    report["album"],
-                    duration=report["duration"],
-                    mbid=report["mbid"],
+                    report.album,
+                    duration=report.duration,
+                    mbid=report.mbid,
                 )
             except Exception as err:
                 self.logger.exception(err)
 
-        self.logger.debug("running scrobble() in executor")
-        self.mass.loop.run_in_executor(None, scrobble)
+        # update now playing if needed
+        if self._currently_playing is None or self._currently_playing != report.uri:
+            self.mass.loop.run_in_executor(None, update_now_playing)
+
+        if self.should_scrobble(report):
+            self.mass.loop.run_in_executor(None, scrobble)
+
+        if report.fully_played:
+            # reset currently playing to avoid it expiring when looping songs
+            self._currently_playing = None
 
     def should_scrobble(self, report: MediaItemPlaybackProgressReport) -> bool:
         """Determine if a track should be scrobbled, to be extended later."""
